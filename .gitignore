@@ -1,7 +1,18 @@
 *.exe
 *.exe~
 s3client
+s3cli
 TODO.md
 build.log
 _cgodiag/
 .idea/
+
+# Wails v2 前端与构建产物
+wailsapp/frontend/node_modules/
+wailsapp/frontend/dist/*
+!wailsapp/frontend/dist/index.html
+wailsapp/build/bin/
+wailsapp/testdata/*.db
+wailsapp/testdata/*.s3share
+wailsapp/testdata/*.enc
+wailsapp/frontend/package.json.md5
