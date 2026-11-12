@@ -25,6 +25,7 @@
 - **账号类型图标**：账号列表每行名称后方用小图标标注类型（S3 = 存储图标，SharePoint = 站点图标）
 - **只读分享 Bucket / SharePoint 文件夹**：S3 对象浏览器或 SharePoint 文档库视图点「分享只读」生成 `.s3share` 分享配置（口令自动生成 8 位随机字符、可改、**留空即免口令**，有效期按小时设置、0 为不限期）；文件中桶名与访问凭据都用**分享口令**经 Argon2id + AES-256-GCM 加密：设置口令时需另行告知对方；留空则为**免口令**（随机口令随文件保存，拿到文件即可打开）。对方在**解锁界面**即可点「加载分享配置（无需解锁）」直接只读浏览，解锁后也可用「分享 → 加载分享配置...」（免口令文件直接打开，需要口令时才提示输入）：界面不提供上传/删除/新建文件夹入口，`awss3` 层对只读账号另有写入拦截兜底，过期后拒绝打开与下载；SharePoint 分享只暴露被分享的文件夹，返回上级不会越出该目录，也不会跳到文档库列表
 - **菜单栏（按功能分类）**：解锁后菜单栏分为五组——「账号」「分享」「设置」「安全」「存储」
+- **关闭最小化到系统托盘**：点关闭按钮不退出，窗口隐藏、图标缩到任务栏托盘（macOS 在菜单栏、Linux 在状态栏）；单击托盘图标或菜单「打开主窗口」恢复窗口，托盘菜单「退出」经二次确认才真正退出；Windows / macOS / Linux 三平台行为一致
 - **网络代理设置**：支持跟随系统环境变量 / 不使用代理 / HTTP·HTTPS 代理 / SOCKS5 代理，含测试连接
 - **账号区右键菜单**：编辑/删除/测试连接
 - **加密导出/导入账号**：Argon2id + AES-256-GCM，可跨机器迁移
@@ -36,6 +37,7 @@
 | 组件 | 技术 |
 |------|------|
 | GUI | [Wails v2](https://wails.io/) + [Vue 3](https://vuejs.org/) |
+| 系统托盘 | [fyne.io/systray](https://github.com/fyne-io/systray)（Windows / macOS / Linux） |
 | S3 | [AWS SDK for Go v2](https://github.com/aws/aws-sdk-go-v2) |
 | 数据库 | [modernc.org/sqlite](https://modernc.org/sqlite)（纯 Go，无需 CGO） |
 | 加密 | AES-256-GCM + [scrypt](https://pkg.go.dev/golang.org/x/crypto/scrypt)（内部）/ [Argon2id](https://pkg.go.dev/golang.org/x/crypto/argon2)（导出文件）密钥派生 |
@@ -47,6 +49,7 @@
 wailsapp/
   main.go                   Wails GUI 入口
   app.go                    Go 绑定层（facade）
+  tray.go                   系统托盘（关闭最小化到托盘、恢复窗口与退出）
   facade_*.go               各业务模块的前端绑定
   frontend/                 Vue 3 前端
   build/                    构建资源（图标、Windows 清单等）

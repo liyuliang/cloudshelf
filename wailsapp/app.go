@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"sync"
+	"sync/atomic"
 
 	"s3client/internal/store"
 )
@@ -14,6 +15,9 @@ type App struct {
 	ctx   context.Context
 	mu    sync.RWMutex
 	store *store.Store
+	// quitting 标记正在走托盘「退出」流程：置位后 OnBeforeClose 放行真正关闭，
+	// 否则关闭按钮一律改为隐藏到托盘。
+	quitting atomic.Bool
 }
 
 func NewApp() *App {
@@ -21,9 +25,23 @@ func NewApp() *App {
 }
 
 // startup 保存 Wails runtime 上下文，供对话框、事件推送等 runtime 调用使用。
+// 托盘回调可能先于它执行，故用 mu 保护，读侧经 runtimeCtx 获取。
 func (a *App) startup(ctx context.Context) {
+	a.mu.Lock()
 	a.ctx = ctx
+	a.mu.Unlock()
 }
+
+// runtimeCtx 返回 runtime 上下文；应用尚未启动完成时返回 nil。
+func (a *App) runtimeCtx() context.Context {
+	a.mu.RLock()
+	defer a.mu.RUnlock()
+	return a.ctx
+}
+
+// markQuitting / isQuitting 见 App.quitting 注释。
+func (a *App) markQuitting()    { a.quitting.Store(true) }
+func (a *App) isQuitting() bool { return a.quitting.Load() }
 
 // currentStore 返回已解锁的账号库；未解锁时返回 nil。
 func (a *App) currentStore() *store.Store {

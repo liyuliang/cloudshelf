@@ -18,9 +18,13 @@ build-cli:
 dev:
 	cd wailsapp && wails dev
 
-## run: 直接运行已构建的桌面应用
+## run: 直接运行已构建的桌面应用（Windows 为 .exe）
 run:
+ifeq ($(GOOS),windows)
+	wailsapp/build/bin/$(APP).exe
+else
 	wailsapp/build/bin/$(APP)
+endif
 
 ## clean: 清理构建产物
 clean:

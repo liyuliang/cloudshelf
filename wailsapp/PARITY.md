@@ -54,7 +54,7 @@
 | 45 | 完整路径解析：按 `/` 数量逐级下钻，停在最后找到的目录 | `parseObjectPath/ResolvePathDir` | `ResolvePathDir`(P2) | `ObjectBrowser` | P2 | ✓ |
 | 46 | 只读分享生成（S3/SharePoint，口令/免口令/有效期） | `share.Create/CreateSharePoint` | `CreateS3Share/CreateSharePointShare` | `CreateShareDialog` | P4 | ✓ |
 | 47 | 解锁前加载分享配置、只读会话、有效期回显、写操作拦截 | `loadShare/openShare` | `OpenShareFile/NeedSharePassword` | `UnlockGate`（免口令/口令弹窗）、`SharePointBrowser`/`ObjectBrowser`（只读 + 过期回显） | P4 | ✓ |
-| 48 | 关闭窗口二次确认 | `SetCloseIntercept` | `OnBeforeClose`（`MessageDialog` 确认对话框） | — | P5 | ✓ |
+| 48 | 关闭窗口二次确认 | `SetCloseIntercept` | `OnBeforeClose`（关闭→最小化到托盘；托盘「退出」二次确认） | — | P5 | ✓ |
 
 ## 阶段汇总
 
