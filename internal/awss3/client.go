@@ -4,20 +4,49 @@ import (
 	"context"
 	"errors"
 	"io"
+	"net/http"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"sync"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
+	awshttp "github.com/aws/aws-sdk-go-v2/aws/transport/http"
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 
 	"s3client/internal/model"
+	"s3client/internal/proxy"
 )
 
+// awsHTTPClient 缓存带代理配置的 HTTP 客户端：代理配置不变时复用同一个实例，
+// 从而共享连接池（省去重复的 TCP/TLS 握手）；配置一改就重建。
+var (
+	awsHTTPMu     sync.Mutex
+	awsHTTPClient aws.HTTPClient
+	awsHTTPConfig proxy.Config
+)
+
+func awsHTTPClientFor(c proxy.Config) aws.HTTPClient {
+	awsHTTPMu.Lock()
+	defer awsHTTPMu.Unlock()
+	if awsHTTPClient == nil || awsHTTPConfig != c {
+		awsHTTPClient = awshttp.NewBuildableClient().WithTransportOptions(func(tr *http.Transport) {
+			tr.Proxy = proxy.ProxyFuncFor(c)
+		})
+		awsHTTPConfig = c
+	}
+	return awsHTTPClient
+}
+
 func newClient(a *model.Account) *s3.Client {
+	return newClientWithProxy(a, proxy.Current())
+}
+
+// newClientWithProxy 用指定的代理配置构造 S3 客户端（newClient 传当前配置，测试传固定配置）。
+func newClientWithProxy(a *model.Account, pc proxy.Config) *s3.Client {
 	creds := credentials.NewStaticCredentialsProvider(a.AccessKeyID, a.SecretAccessKey, "")
 	region := a.Region
 	if region == "" {
@@ -28,6 +57,7 @@ func newClient(a *model.Account) *s3.Client {
 		Credentials:  creds,
 		UsePathStyle: a.UsePathStyle,
 		BaseEndpoint: endpointPtr(a.Endpoint),
+		HTTPClient:   awsHTTPClientFor(pc),
 	})
 }
 
@@ -65,17 +95,36 @@ func fileType(name string) string {
 	return strings.ToUpper(ext)
 }
 
-func ListObjects(a *model.Account, bucket, prefix string) ([]Object, error) {
+// ListObjects 单层列出目录内容。S3 单次 ListObjectsV2 最多返回 1000 个 key
+// （CommonPrefixes 与 Contents 合计）；这里按约定只取第一页、不翻页，
+// 首页之外的文件通过 SearchObjects 的服务端搜索定位。
+// 返回的 bool 表示结果被截断（该目录还有更多条目）。
+func ListObjects(a *model.Account, bucket, prefix string) ([]Object, bool, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
-	client := newClient(a)
-	out, err := client.ListObjectsV2(ctx, &s3.ListObjectsV2Input{
-		Bucket:    &bucket,
-		Prefix:    &prefix,
-		Delimiter: aws.String("/"),
-	})
+	return listObjects(ctx, newClient(a), bucket, prefix, "")
+}
+
+// SearchObjects 按名称前缀在服务端搜索：把关键字拼到当前 prefix 之后作为
+// ListObjectsV2 的 Prefix 并去掉 Delimiter，因此能命中列表首页之外、
+// 以及子目录里的文件。S3 只支持前缀匹配，无法做任意位置包含。
+func SearchObjects(a *model.Account, bucket, prefix, keyword string) ([]Object, bool, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	return listObjects(ctx, newClient(a), bucket, prefix, keyword)
+}
+
+func listObjects(ctx context.Context, client *s3.Client, bucket, prefix, keyword string) ([]Object, bool, error) {
+	in := &s3.ListObjectsV2Input{
+		Bucket: &bucket,
+		Prefix: aws.String(prefix + keyword),
+	}
+	if keyword == "" {
+		in.Delimiter = aws.String("/")
+	}
+	out, err := client.ListObjectsV2(ctx, in)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	var objects []Object
 	for _, cp := range out.CommonPrefixes {
@@ -85,8 +134,8 @@ func ListObjects(a *model.Account, bucket, prefix string) ([]Object, error) {
 	}
 	for _, obj := range out.Contents {
 		k := aws.ToString(obj.Key)
-		if k == prefix {
-			continue
+		if k == prefix || strings.HasSuffix(k, "/") {
+			continue // 跳过目录占位对象
 		}
 		name := k[len(prefix):]
 		objects = append(objects, Object{
@@ -98,7 +147,58 @@ func ListObjects(a *model.Account, bucket, prefix string) ([]Object, error) {
 			LastModified: aws.ToTime(obj.LastModified),
 		})
 	}
-	return objects, nil
+	sortObjects(objects)
+	return objects, aws.ToBool(out.IsTruncated), nil
+}
+
+// ResolvePathDir 按路径中的目录段逐级下钻，返回最后一个「存在」的目录前缀
+// （以 / 结尾，空串表示 bucket 根）；目录存在指其下至少有一个对象。
+// 有多少个目录段就尝试进入多少级，某一级找不到就停在上一级，不跳到空目录。
+func ResolvePathDir(a *model.Account, bucket string, dirs []string) (string, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	return resolvePathDir(ctx, newClient(a), bucket, dirs)
+}
+
+func resolvePathDir(ctx context.Context, client *s3.Client, bucket string, dirs []string) (string, error) {
+	prefix := ""
+	for _, d := range dirs {
+		next := prefix + d + "/"
+		ok, err := dirExists(ctx, client, bucket, next)
+		if err != nil {
+			return "", err
+		}
+		if !ok {
+			break
+		}
+		prefix = next
+	}
+	return prefix, nil
+}
+
+// dirExists 用 MaxKeys=1 只探测 prefix 下是否有任意对象，避免整页列表的 1000 上限影响判断。
+func dirExists(ctx context.Context, client *s3.Client, bucket, prefix string) (bool, error) {
+	out, err := client.ListObjectsV2(ctx, &s3.ListObjectsV2Input{
+		Bucket:  &bucket,
+		Prefix:  aws.String(prefix),
+		MaxKeys: aws.Int32(1),
+	})
+	if err != nil {
+		return false, err
+	}
+	return len(out.Contents) > 0 || len(out.CommonPrefixes) > 0, nil
+}
+
+// sortObjects 把文件列表按修改时间倒序显示：文件夹固定在前面便于下钻，
+// 文件夹与文件各自按修改时间倒序（S3 的 CommonPrefixes 没有时间，保持接口原始顺序）。
+func sortObjects(objects []Object) {
+	sort.SliceStable(objects, func(i, j int) bool {
+		a, b := objects[i], objects[j]
+		if a.IsDir != b.IsDir {
+			return a.IsDir
+		}
+		return a.LastModified.After(b.LastModified)
+	})
 }
 
 // ListObjectsRecursive 递归列出 prefix 下的所有文件对象（不再按 / 分层），用于整个文件夹下载。

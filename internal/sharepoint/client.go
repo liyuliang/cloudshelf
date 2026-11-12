@@ -13,15 +13,23 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"sync"
 	"time"
+
+	"s3client/internal/proxy"
 )
 
 const (
 	graphBase = "https://graph.microsoft.com/v1.0"
 	authHost  = "https://login.microsoftonline.com"
 )
+
+// do 执行请求：统一走软件配置里的代理（internal/proxy）并复用连接池。
+func do(req *http.Request) (*http.Response, error) {
+	return proxy.Client().Do(req)
+}
 
 // Config 是一个 SharePoint 连接所需的凭据与目标站点。
 // SiteURL 形如 https://contoso.sharepoint.com/sites/TeamA （用于解析站点 ID）。
@@ -87,7 +95,7 @@ func accessToken(ctx context.Context, c *Config) (string, error) {
 	}
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := do(req)
 	if err != nil {
 		return "", err
 	}
@@ -123,7 +131,7 @@ func graphGet(ctx context.Context, c *Config, path string, out interface{}) erro
 		return err
 	}
 	req.Header.Set("Authorization", "Bearer "+token)
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := do(req)
 	if err != nil {
 		return err
 	}
@@ -153,7 +161,7 @@ func graphDo(ctx context.Context, c *Config, method, path string, body io.Reader
 	if bodyLen > 0 {
 		req.ContentLength = bodyLen
 	}
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := do(req)
 	if err != nil {
 		return err
 	}
@@ -263,7 +271,20 @@ func ListChildren(ctx context.Context, c *Config, driveID, itemPath string) ([]I
 	for _, gi := range out.Value {
 		items = append(items, gi.toItem())
 	}
+	sortItems(items)
 	return items, nil
+}
+
+// sortItems 把文件列表按修改时间倒序显示：文件夹固定在前面便于下钻，
+// 文件夹与文件各自按修改时间倒序。
+func sortItems(items []Item) {
+	sort.SliceStable(items, func(i, j int) bool {
+		a, b := items[i], items[j]
+		if a.IsFolder != b.IsFolder {
+			return a.IsFolder
+		}
+		return a.LastModified.After(b.LastModified)
+	})
 }
 
 // pathEscapeSegments 对路径每一段做 URL 转义但保留斜杠分隔。
@@ -289,7 +310,7 @@ func DownloadItem(ctx context.Context, c *Config, driveID, itemID, localPath str
 	if err != nil {
 		return err
 	}
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := do(req)
 	if err != nil {
 		return err
 	}
@@ -392,7 +413,7 @@ func putChunk(ctx context.Context, uploadURL string, data []byte, start, end, to
 	}
 	req.ContentLength = int64(len(data))
 	req.Header.Set("Content-Range", fmt.Sprintf("bytes %d-%d/%d", start, end, total))
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := do(req)
 	if err != nil {
 		return err
 	}
