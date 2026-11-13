@@ -24,7 +24,9 @@ const (
 	Argon2Time    = 3
 	Argon2Memory  = 64 * 1024 // KiB
 	Argon2Threads = 4
-	// 用于验证主密码的已知明文
+	// 用于验证主密码的已知明文。
+	// 注意：这是 s3client 时代的固定值，已随数据库落库（加密校验器以此明文
+	// 加密存储），更名 cloudshelf 后必须保持不变，否则老用户无法解锁。
 	verifierPlain = "s3client-master-password-verifier"
 )
 

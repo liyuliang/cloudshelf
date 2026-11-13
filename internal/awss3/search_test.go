@@ -13,8 +13,8 @@ import (
 
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 
-	"s3client/internal/model"
-	"s3client/internal/proxy"
+	"cloudshelf/internal/model"
+	"cloudshelf/internal/proxy"
 )
 
 // testClient 返回一个指向本地伪 S3 服务的客户端（直连，不走代理）。

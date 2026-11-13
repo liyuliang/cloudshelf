@@ -3,6 +3,8 @@
 **验收原则**：「全部功能保持不变」逐行打勾，任何一行从 `✓` 退化都要先修再推进阶段。
 旧 Fyne 版（根目录 `s3client.exe`）全程保留、可同时运行，用作 A/B 对照：同一 `~/.s3client/data.db` 与 `.s3share` 夹具在两个版本上执行相同操作，比对结果。
 
+> 更名注：项目现为 **CloudShelf**（原 s3client）。新版数据目录为 `~/.cloudshelf`（首次启动由 `~/.s3client` 自动迁移），分享文件扩展名改为 `.cloudshelf`（旧 `.s3share` 仍可打开）；下文历史对照中的 `s3client.exe` / `~/.s3client` 指旧版产物与旧版目录。
+
 状态：`✓` 已接入（标注阶段） · `P2/P3/P4/P5` 计划阶段 · `保留` 不受 UI 迁移影响
 
 | # | 功能 | 旧版位置 | Wails facade | 前端组件 | 阶段 | 状态 |
@@ -49,7 +51,7 @@
 | 40 | SharePoint 文件浏览器（面包屑/搜索/下载进度/建夹/删） | `buildSharePointView` | 同上 + 前端本地名称过滤 | `SharePointBrowser` | P4 | ✓ |
 | 41 | 标签页 JetBrains 全套（复制/关闭/关闭其他/关闭右侧/关闭所有/分屏/拖动） | `tabs.go` | — | `stores/browser.ts` 双栏 panes + `TabWorkspace` | P3 | ✓ |
 | 42 | 网络代理设置（4 模式/地址端口/账号密码/NO_PROXY/测试连接） | `settings.go` | `Get/Set/Validate/CheckProxy/ProxyModes` | `ProxyDialog` | P1 | ✓ |
-| 43 | 配置存 `~/.s3client/config.json`(0600)，GUI/CLI 共用，保存立即生效 | `internal/proxy` | 原样复用 | — | P1 | ✓ |
+| 43 | 配置存 `~/.cloudshelf/config.json`(0600)，GUI/CLI 共用，保存立即生效 | `internal/proxy` | 原样复用 | — | P1 | ✓ |
 | 44 | S3 列表截断提示 + 服务端前缀搜索（不分页） | `SearchObjects/ListObjects` | 同名方法(P2) | `ObjectBrowser` | P2 | ✓ |
 | 45 | 完整路径解析：按 `/` 数量逐级下钻，停在最后找到的目录 | `parseObjectPath/ResolvePathDir` | `ResolvePathDir`(P2) | `ObjectBrowser` | P2 | ✓ |
 | 46 | 只读分享生成（S3/SharePoint，口令/免口令/有效期） | `share.Create/CreateSharePoint` | `CreateS3Share/CreateSharePointShare` | `CreateShareDialog` | P4 | ✓ |
@@ -73,8 +75,8 @@
 - `accounts` 表 12 列及顺序、`meta` 表
 - scrypt `N=32768,r=8,p=1`，salt/key 32B，verifier 明文
 - AES-256-GCM `nonce(12)||ct||tag(16)` + 标准 base64
-- 导出 / `.s3share` 外层 JSON：`version=1, kdf=argon2id, argon_time=3, argon_memory=65536, argon_threads=4, salt, payload`
+- 导出 / `.cloudshelf`（旧 `.s3share`）外层 JSON：`version=1, kdf=argon2id, argon_time=3, argon_memory=65536, argon_threads=4, salt, payload`
 - `config.json` JSON 键与非 Windows 0600
 - facade 的 `AccountDTO`/`ProxyDTO` 往返不丢字段
 
-E2E：用现有 `~/.s3client/data.db` 以旧主密码在新版解锁 → 账号逐项比对；导出→导入数量一致；现有 `.s3share`（需口令/免口令）打开结果一致；旧 exe 同夹具 A/B 对照。
+E2E：用现有 `~/.cloudshelf/data.db`（由 `~/.s3client` 自动迁移而来）以旧主密码在新版解锁 → 账号逐项比对；导出→导入数量一致；现有 `.cloudshelf`/`.s3share`（需口令/免口令）打开结果一致；旧 exe 同夹具 A/B 对照。

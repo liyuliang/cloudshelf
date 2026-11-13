@@ -8,8 +8,8 @@ import (
 
 	wruntime "github.com/wailsapp/wails/v2/pkg/runtime"
 
-	"s3client/internal/awss3"
-	"s3client/internal/model"
+	"cloudshelf/internal/awss3"
+	"cloudshelf/internal/model"
 )
 
 // ---- 传输 DTO ----

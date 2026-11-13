@@ -36,7 +36,7 @@ async function loadShare() {
   shareError.value = ''
   shareLoading.value = true
   try {
-    const path = await api.pickFile('选择分享配置文件（.s3share）')
+    const path = await api.pickFile('选择分享配置文件（.cloudshelf，兼容旧版 .s3share）')
     if (!path) { shareLoading.value = false; return }
     const b64 = await api.readFileB64(path)
     shareData.value = b64
@@ -82,7 +82,7 @@ async function submitSharePw() {
   <div class="unlock-wrap">
     <div class="unlock-card card">
       <div class="unlock-mark"></div>
-      <h1>S3 Client</h1>
+      <h1>CloudShelf</h1>
       <p class="muted">{{ session.initialized ? '输入主密码解锁' : '首次使用，请设置主密码' }}</p>
       <input
         ref="input"

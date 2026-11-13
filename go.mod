@@ -1,4 +1,4 @@
-module s3client
+module cloudshelf
 
 go 1.25.3
 

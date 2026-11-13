@@ -1,11 +1,11 @@
-APP     := s3client
-CLI     := s3cli
+APP     := cloudshelf
+CLI     := cloudshelf-cli
 CLI_PKG := ./cmd/cli
 GOOS    := $(shell go env GOOS)
 
 .PHONY: build build-cli dev run clean
 
-## build: 构建 Wails v2 桌面应用（产出 wailsapp/build/bin/s3client.exe）
+## build: 构建 Wails v2 桌面应用（产出 wailsapp/build/bin/cloudshelf.exe）
 build:
 	cd wailsapp && wails build
 

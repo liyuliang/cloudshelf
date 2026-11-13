@@ -1,5 +1,5 @@
 // Package proxy 管理软件配置里的网络代理（HTTP/HTTPS、SOCKS5）：
-// 从 ~/.s3client/config.json 读写配置，并为标准库 HTTP 客户端（SharePoint）
+// 从 ~/.cloudshelf/config.json 读写配置，并为标准库 HTTP 客户端（SharePoint）
 // 与 AWS SDK（S3）提供代理函数，GUI/CLI 共用同一份配置。
 package proxy
 
@@ -21,6 +21,8 @@ import (
 	"time"
 
 	"golang.org/x/net/http/httpproxy"
+
+	"cloudshelf/internal/appdir"
 )
 
 // 代理模式（配置文件里的 mode 取值）。
@@ -154,14 +156,10 @@ func clientFor(c Config) *http.Client {
 
 // ==================== 持久化 ====================
 
-// ConfigPath 返回配置文件路径（~/.s3client/config.json）。
+// ConfigPath 返回配置文件路径（~/.cloudshelf/config.json）。
 func ConfigPath() (string, error) {
-	home, err := os.UserHomeDir()
+	dir, err := appdir.Dir()
 	if err != nil {
-		return "", err
-	}
-	dir := filepath.Join(home, ".s3client")
-	if err := os.MkdirAll(dir, 0700); err != nil {
 		return "", err
 	}
 	return filepath.Join(dir, "config.json"), nil

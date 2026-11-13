@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"time"
 
-	"s3client/internal/sharepoint"
+	"cloudshelf/internal/sharepoint"
 )
 
 // ---- SharePoint DTO ----

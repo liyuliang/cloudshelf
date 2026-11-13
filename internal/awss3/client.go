@@ -17,8 +17,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/credentials"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 
-	"s3client/internal/model"
-	"s3client/internal/proxy"
+	"cloudshelf/internal/model"
+	"cloudshelf/internal/proxy"
 )
 
 // awsHTTPClient 缓存带代理配置的 HTTP 客户端：代理配置不变时复用同一个实例，

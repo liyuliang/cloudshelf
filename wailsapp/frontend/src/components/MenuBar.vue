@@ -50,7 +50,7 @@ function pick(key: string, disabled?: boolean) {
 
 <template>
   <header class="topbar" @mouseleave="open = null">
-    <div class="brand"><span class="brand-mark"></span>S3 Client</div>
+    <div class="brand"><span class="brand-mark"></span>CloudShelf</div>
     <nav class="menubar">
       <div v-for="g in groups" :key="g.name" class="menu-group">
         <button

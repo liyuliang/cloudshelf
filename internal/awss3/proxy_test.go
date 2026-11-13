@@ -14,8 +14,8 @@ import (
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 
-	"s3client/internal/model"
-	"s3client/internal/proxy"
+	"cloudshelf/internal/model"
+	"cloudshelf/internal/proxy"
 )
 
 // TestAWSHTTPClientUsesProxy 验证注入给 AWS SDK 的 HTTP 客户端确实把请求发给

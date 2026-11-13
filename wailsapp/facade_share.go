@@ -4,7 +4,7 @@ import (
 	"encoding/base64"
 	"time"
 
-	"s3client/internal/share"
+	"cloudshelf/internal/share"
 )
 
 // ---- 分享配置 DTO ----

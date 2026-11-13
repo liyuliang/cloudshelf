@@ -2,7 +2,7 @@ package main
 
 // 数据兼容回归：Wails 版复用 7 个零改动的后端包，本测试把「老数据格式」钉死成断言，
 // 防止后续阶段在 facade 里不小心重写加解密 / 序列化 / schema。
-// 全程用临时 HOME 隔离，绝不触碰用户真实的 ~/.s3client。
+// 全程用临时 HOME 隔离，绝不触碰用户真实的 ~/.cloudshelf。
 
 import (
 	"database/sql"
@@ -15,11 +15,11 @@ import (
 	"testing"
 	"time"
 
-	"s3client/internal/crypto"
-	"s3client/internal/model"
-	"s3client/internal/proxy"
-	"s3client/internal/share"
-	"s3client/internal/store"
+	"cloudshelf/internal/crypto"
+	"cloudshelf/internal/model"
+	"cloudshelf/internal/proxy"
+	"cloudshelf/internal/share"
+	"cloudshelf/internal/store"
 )
 
 const testMaster = "compat-test-master-password"
@@ -42,7 +42,7 @@ func TestCompatSchema(t *testing.T) {
 	}
 	defer s.Close()
 
-	db, err := sql.Open("sqlite", filepath.Join(home, ".s3client", "data.db"))
+	db, err := sql.Open("sqlite", filepath.Join(home, ".cloudshelf", "data.db"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -94,7 +94,7 @@ func TestCompatCrypto(t *testing.T) {
 		t.Fatalf("scrypt key 长度 = %d，期望 32", len(key))
 	}
 
-	plain := []byte("s3client-compat-plaintext")
+	plain := []byte("cloudshelf-compat-plaintext")
 	enc, err := crypto.Encrypt(key, plain)
 	if err != nil {
 		t.Fatal(err)
@@ -209,7 +209,7 @@ func TestCompatExportImport(t *testing.T) {
 	}
 }
 
-// TestCompatShareFile 断言 .s3share 外层 JSON、需口令/免口令两种打开方式。
+// TestCompatShareFile 断言 .cloudshelf（旧称 .s3share）外层 JSON、需口令/免口令两种打开方式。
 func TestCompatShareFile(t *testing.T) {
 	acc := &model.Account{Name: "share-src", Provider: "s3", Endpoint: "e", Region: "r",
 		AccessKeyID: "AK", SecretAccessKey: "SK"}
@@ -277,7 +277,7 @@ func TestCompatProxyConfig(t *testing.T) {
 	if err := proxy.Set(cfg); err != nil {
 		t.Fatal(err)
 	}
-	path := filepath.Join(home, ".s3client", "config.json")
+	path := filepath.Join(home, ".cloudshelf", "config.json")
 	info, err := os.Stat(path)
 	if err != nil {
 		t.Fatal(err)

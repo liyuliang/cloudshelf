@@ -60,7 +60,7 @@ async function generate() {
       dataB64 = await api.createS3Share(props.account, props.bucket!, name.value, h, password.value)
     }
     // 弹出保存对话框
-    const defaultFile = isSP.value ? 'sharepoint-readonly.s3share' : `${props.bucket}-readonly.s3share`
+    const defaultFile = isSP.value ? 'sharepoint-readonly.cloudshelf' : `${props.bucket}-readonly.cloudshelf`
     const savePath = await api.pickSaveFile('保存分享配置文件', defaultFile)
     if (!savePath) {
       busy.value = false

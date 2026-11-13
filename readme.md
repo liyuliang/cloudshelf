@@ -1,11 +1,13 @@
-# S3 Client
+# CloudShelf
 
-一个桌面端 AWS S3 客户端，支持 S3 兼容存储（如 MinIO）及 SharePoint 文档库。使用 Go + Wails v2 + Vue 构建，提供 GUI 和 CLI 两种入口。
+一个桌面端多存储文件管理器：集中管理 S3 兼容存储（AWS S3、MinIO 等）与 SharePoint 文档库。使用 Go + Wails v2 + Vue 构建，提供 GUI 和 CLI 两种入口。
+
+> 项目前身为 `s3client`，现更名为 **CloudShelf**：go module、二进制名、界面品牌、数据目录（`~/.s3client` → `~/.cloudshelf`，首次启动自动迁移）全部随之更新；主密码、账号数据、已有的 `.s3share` 分享文件保持兼容。
 
 ## 功能
 
 - **S3 账号管理**：新增、编辑、删除账号，支持自定义 Endpoint、Region、Path-Style
-- **密码安全存储**：Secret Access Key 经 AES-256-GCM 加密后存入 SQLite（`~/.s3client/data.db`），密钥由主密码经 scrypt 派生，**绝不明文存储**
+- **密码安全存储**：Secret Access Key 经 AES-256-GCM 加密后存入 SQLite（`~/.cloudshelf/data.db`），密钥由主密码经 scrypt 派生，**绝不明文存储**
 - **主密码保护**：首次使用设置主密码，后续启动需输入主密码解锁
 - **Bucket 浏览**：双击账号查看其下所有 Bucket；**每个账号一个 tab**，已打开的账号再次双击只是切回该 tab，不会重新加载
 - **标签页右键菜单（类 JetBrains）**：右键标签弹出 复制标签页（在右侧再开一个内容相同的标签）/ 关闭 / 关闭其他 / 关闭右侧所有标签页 / 关闭所有 / 向右分割并移动（分屏）/ 移动到左侧分割 / 左移·右移调整顺序；标签上的 × 或鼠标中键也可关闭，右键标签条空白处可「关闭所有标签页 / 取消分屏」，分屏中间的分隔条可拖动调整宽度，标签过长自动省略号截断
@@ -23,7 +25,7 @@
 - **Bucket 权限检查**：双击账号后用 HeadBucket 检查每个 Bucket 的访问权限，固定列显示 可访问/无权限；可访问的桶名显示绿色可双击进入，无权限的显示灰色且禁止双击
 - **右键查看属性**：Bucket/文件夹/文件均可右键查看属性，属性值可 Ctrl+C 复制
 - **账号类型图标**：账号列表每行名称后方用小图标标注类型（S3 = 存储图标，SharePoint = 站点图标）
-- **只读分享 Bucket / SharePoint 文件夹**：S3 对象浏览器或 SharePoint 文档库视图点「分享只读」生成 `.s3share` 分享配置（口令自动生成 8 位随机字符、可改、**留空即免口令**，有效期按小时设置、0 为不限期）；文件中桶名与访问凭据都用**分享口令**经 Argon2id + AES-256-GCM 加密：设置口令时需另行告知对方；留空则为**免口令**（随机口令随文件保存，拿到文件即可打开）。对方在**解锁界面**即可点「加载分享配置（无需解锁）」直接只读浏览，解锁后也可用「分享 → 加载分享配置...」（免口令文件直接打开，需要口令时才提示输入）：界面不提供上传/删除/新建文件夹入口，`awss3` 层对只读账号另有写入拦截兜底，过期后拒绝打开与下载；SharePoint 分享只暴露被分享的文件夹，返回上级不会越出该目录，也不会跳到文档库列表
+- **只读分享 Bucket / SharePoint 文件夹**：S3 对象浏览器或 SharePoint 文档库视图点「分享只读」生成 `.cloudshelf` 分享配置（旧版 `.s3share` 文件仍可打开；口令自动生成 8 位随机字符、可改、**留空即免口令**，有效期按小时设置、0 为不限期）；文件中桶名与访问凭据都用**分享口令**经 Argon2id + AES-256-GCM 加密：设置口令时需另行告知对方；留空则为**免口令**（随机口令随文件保存，拿到文件即可打开）。对方在**解锁界面**即可点「加载分享配置（无需解锁）」直接只读浏览，解锁后也可用「分享 → 加载分享配置...」（免口令文件直接打开，需要口令时才提示输入）：界面不提供上传/删除/新建文件夹入口，`awss3` 层对只读账号另有写入拦截兜底，过期后拒绝打开与下载；SharePoint 分享只暴露被分享的文件夹，返回上级不会越出该目录，也不会跳到文档库列表
 - **菜单栏（按功能分类）**：解锁后菜单栏分为五组——「账号」「分享」「设置」「安全」「存储」
 - **关闭最小化到系统托盘**：点关闭按钮不退出，窗口隐藏、图标缩到任务栏托盘（macOS 在菜单栏、Linux 在状态栏）；单击托盘图标或菜单「打开主窗口」恢复窗口，托盘菜单「退出」经二次确认才真正退出；Windows / macOS / Linux 三平台行为一致
 - **网络代理设置**：支持跟随系统环境变量 / 不使用代理 / HTTP·HTTPS 代理 / SOCKS5 代理，含测试连接
@@ -58,10 +60,11 @@ internal/
   crypto/crypto.go          AES-256-GCM 加解密 + scrypt 密钥派生
   model/account.go          账号数据模型
   store/store.go            SQLite 存储层（主密码管理 + 账号 CRUD）
+  appdir/appdir.go          数据目录 ~/.cloudshelf（旧 ~/.s3client 首次启动自动迁移）
   awss3/client.go           S3 操作封装（列桶/列对象/上传/下载/删除/预签名/新建文件夹）
   proxy/proxy.go            网络代理配置（HTTP/SOCKS5/环境变量）
   sharepoint/client.go      SharePoint Graph REST 客户端
-  share/share.go            只读分享配置（.s3share）的生成与口令解密加载
+  share/share.go            只读分享配置（.cloudshelf，兼容旧 .s3share）的生成与口令解密加载
 ```
 
 ## 构建与运行
@@ -69,7 +72,7 @@ internal/
 需要安装 [Wails CLI](https://wails.io/docs/gettingstarted/installation)：`go install github.com/wailsapp/wails/v2/cmd/wails@latest`
 
 ```bash
-make build       # 构建 Wails 桌面应用（产出 wailsapp/build/bin/s3client.exe）
+make build       # 构建 Wails 桌面应用（产出 wailsapp/build/bin/cloudshelf.exe）
 make build-cli   # 构建纯 Go CLI（跨平台，无需 CGO）
 make dev         # 启动开发模式（Go + Vue 热重载）
 make run         # 运行已构建的桌面应用
@@ -82,10 +85,10 @@ make run         # 运行已构建的桌面应用
 cd wailsapp && wails build
 
 # CLI —— 任意平台
-CGO_ENABLED=0 go build -o s3cli ./cmd/cli
+CGO_ENABLED=0 go build -o cloudshelf-cli ./cmd/cli
 ```
 
-CLI 命令：`list` | `add` | `del <id>` | `test <id>` | `buckets <id>` | `help` | `exit`
+CLI 命令：`list` | `add` | `del <id>` | `test <id>` | `buckets <id>` | `help` | `exit`（交互提示符 `cloudshelf>`）
 
 ## 安全设计
 
@@ -93,6 +96,6 @@ CLI 命令：`list` | `add` | `del <id>` | `test <id>` | `buckets <id>` | `help`
 - 主密码经 scrypt（N=32768, r=8, p=1）派生 32 字节密钥
 - 每次加密使用随机 12 字节 nonce + AES-256-GCM
 - 主密码本身不落库，仅存加密校验器用于解锁验证
-- 数据库文件位于 `~/.s3client/data.db`，权限 0700
-- **代理配置**存于 `~/.s3client/config.json`（权限 0600），代理账号/密码为**明文**
+- 数据库文件位于 `~/.cloudshelf/data.db`，权限 0700（由旧版 `~/.s3client` 首次启动自动迁移而来）
+- **代理配置**存于 `~/.cloudshelf/config.json`（权限 0600），代理账号/密码为**明文**
 - **账号导出文件**：用主密码经 Argon2id 派生独立密钥，AES-256-GCM 加密；文件自包含

@@ -5,7 +5,7 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"s3client/internal/store"
+	"cloudshelf/internal/store"
 )
 
 // App 是 Wails 的 Go 绑定层（facade）。

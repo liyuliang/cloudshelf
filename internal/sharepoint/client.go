@@ -18,7 +18,7 @@ import (
 	"sync"
 	"time"
 
-	"s3client/internal/proxy"
+	"cloudshelf/internal/proxy"
 )
 
 const (

@@ -106,7 +106,7 @@ async function save() {
       </div>
     </div>
 
-    <p class="faint hint">配置保存在 ~/.s3client/config.json，GUI 与 CLI 共用；保存后立即生效，进行中的传输不受影响。</p>
+    <p class="faint hint">配置保存在 ~/.cloudshelf/config.json，GUI 与 CLI 共用；保存后立即生效，进行中的传输不受影响。</p>
     <p v-if="error" class="error-text">{{ error }}</p>
     <p v-if="notice" class="success-text">{{ notice }}</p>
     <div class="dialog-actions">

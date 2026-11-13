@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"s3client/internal/proxy"
+	"cloudshelf/internal/proxy"
 )
 
 // ProxyDTO 与 proxy.Config 字段一一对应，作为绑定传输结构（避免 json tag 影响绑定）。

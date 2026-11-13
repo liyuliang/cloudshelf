@@ -92,7 +92,7 @@ async function handleMenu(name: string) {
 // 从菜单加载分享配置
 async function loadShareFromMenu() {
   try {
-    const path = await api.pickFile('选择分享配置文件（.s3share）')
+    const path = await api.pickFile('选择分享配置文件（.cloudshelf，兼容旧版 .s3share）')
     if (!path) return
     const b64 = await api.readFileB64(path)
     const needPw = await api.needSharePassword(b64)

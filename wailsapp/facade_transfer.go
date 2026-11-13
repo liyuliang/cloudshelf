@@ -7,7 +7,7 @@ import (
 
 	wruntime "github.com/wailsapp/wails/v2/pkg/runtime"
 
-	"s3client/internal/awss3"
+	"cloudshelf/internal/awss3"
 )
 
 // P3：四路并发 + 每文件进度事件。

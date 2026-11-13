@@ -55,7 +55,7 @@ async function run() {
       case 'export': {
         if (!pw.value) throw new Error('请输入主密码')
         const b64 = await api.exportAccounts(pw.value)
-        const p = await api.pickSaveFile('保存加密的账号导出文件', 's3client-accounts.enc')
+        const p = await api.pickSaveFile('保存加密的账号导出文件', 'cloudshelf-accounts.enc')
         if (!p) return
         await api.writeFileB64(p, b64)
         notice.value = '账号已加密导出'

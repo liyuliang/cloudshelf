@@ -8,7 +8,7 @@ import (
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 
-	"s3client/internal/store"
+	"cloudshelf/internal/store"
 )
 
 // ---- 会话门（对应旧版 showUnlock / 加锁 / 改主密码 / 改库位置）----

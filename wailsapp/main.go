@@ -20,7 +20,7 @@ func main() {
 	stopTray := startTray(app)
 
 	err := wails.Run(&options.App{
-		Title:            "S3 Client",
+		Title:            "CloudShelf",
 		Width:            1200,
 		Height:           800,
 		AssetServer:      &assetserver.Options{Assets: assets},

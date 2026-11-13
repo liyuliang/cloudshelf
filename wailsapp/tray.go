@@ -61,11 +61,11 @@ func (a *App) trayReady() {
 	} else {
 		systray.SetIcon(trayIconPNG)
 	}
-	systray.SetTitle("S3 Client")
-	systray.SetTooltip("S3 Client")
+	systray.SetTitle("CloudShelf")
+	systray.SetTooltip("CloudShelf")
 
-	mShow := systray.AddMenuItem("打开主窗口", "显示 S3 Client 主窗口")
-	mQuit := systray.AddMenuItem("退出", "退出 S3 Client")
+	mShow := systray.AddMenuItem("打开主窗口", "显示 CloudShelf 主窗口")
+	mQuit := systray.AddMenuItem("退出", "退出 CloudShelf")
 	go func() {
 		for {
 			select {
@@ -105,7 +105,7 @@ func (a *App) quitFromTray() {
 	result, _ := wruntime.MessageDialog(ctx, wruntime.MessageDialogOptions{
 		Type:          wruntime.QuestionDialog,
 		Title:         "确认退出",
-		Message:       "确定要退出 S3 Client 吗？\n（关闭窗口只会最小化到托盘）",
+		Message:       "确定要退出 CloudShelf 吗？\n（关闭窗口只会最小化到托盘）",
 		Buttons:       []string{"确定", "取消"},
 		DefaultButton: defaultButton,
 	})

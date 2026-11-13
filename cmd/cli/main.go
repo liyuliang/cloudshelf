@@ -9,9 +9,9 @@ import (
 
 	"golang.org/x/term"
 
-	"s3client/internal/awss3"
-	"s3client/internal/model"
-	"s3client/internal/store"
+	"cloudshelf/internal/awss3"
+	"cloudshelf/internal/model"
+	"cloudshelf/internal/store"
 )
 
 func main() {
@@ -38,7 +38,7 @@ func main() {
 
 	scanner := bufio.NewScanner(os.Stdin)
 	for {
-		fmt.Print("\ns3cli> ")
+		fmt.Print("\ncloudshelf> ")
 		if !scanner.Scan() {
 			break
 		}

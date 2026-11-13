@@ -3,9 +3,9 @@ package main
 import (
 	"errors"
 
-	"s3client/internal/awss3"
-	"s3client/internal/model"
-	"s3client/internal/sharepoint"
+	"cloudshelf/internal/awss3"
+	"cloudshelf/internal/model"
+	"cloudshelf/internal/sharepoint"
 )
 
 // AccountDTO 是前后端之间的账号传输结构，字段全为可序列化基本类型。

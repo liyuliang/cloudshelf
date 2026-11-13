@@ -1,4 +1,4 @@
-// Package share 实现 Bucket 的只读分享配置（.s3share）。
+// Package share 实现 Bucket 的只读分享配置（.cloudshelf，兼容旧版 .s3share）。
 //
 // 文件格式：明文部分只含版本、KDF 参数与 salt，桶名、有效期和访问凭据
 // 全部封装在 AES-256-GCM 载荷内。因此没有分享口令既看不到 AK/SK，
@@ -12,8 +12,8 @@ import (
 	"fmt"
 	"time"
 
-	"s3client/internal/crypto"
-	"s3client/internal/model"
+	"cloudshelf/internal/crypto"
+	"cloudshelf/internal/model"
 )
 
 // Version 是当前分享配置文件格式版本。

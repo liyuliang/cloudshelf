@@ -10,8 +10,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"s3client/internal/crypto"
-	"s3client/internal/model"
+	"cloudshelf/internal/appdir"
+	"cloudshelf/internal/crypto"
+	"cloudshelf/internal/model"
 
 	_ "modernc.org/sqlite"
 )
@@ -21,16 +22,9 @@ type Store struct {
 	key []byte
 }
 
+// configDir 返回应用数据目录（~/.cloudshelf，旧 ~/.s3client 自动迁移）。
 func configDir() (string, error) {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return "", err
-	}
-	dir := filepath.Join(home, ".s3client")
-	if err := os.MkdirAll(dir, 0700); err != nil {
-		return "", err
-	}
-	return dir, nil
+	return appdir.Dir()
 }
 
 // pointerFile 记录当前数据库文件的实际路径（不含数据库本身）。
