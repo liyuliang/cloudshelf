@@ -64,6 +64,16 @@ export function PresignURL(arg1:main.AccountDTO,arg2:string,arg3:string,arg4:num
 
 export function ProxyModes():Promise<Array<main.ProxyModeDTO>>;
 
+export function RWSGetDatasetCSV(arg1:main.AccountDTO,arg2:string,arg3:string,arg4:string):Promise<main.RWSDatasetDataDTO>;
+
+export function RWSListDatasets(arg1:main.AccountDTO,arg2:string,arg3:string):Promise<Array<main.RWSDatasetDTO>>;
+
+export function RWSListSites(arg1:main.AccountDTO,arg2:string):Promise<Array<main.RWSSiteDTO>>;
+
+export function RWSListStudies(arg1:main.AccountDTO):Promise<Array<main.RWSStudyDTO>>;
+
+export function RWSListSubjects(arg1:main.AccountDTO,arg2:string):Promise<Array<main.RWSSubjectDTO>>;
+
 export function ReadFileB64(arg1:string):Promise<string>;
 
 export function ResolvePathDir(arg1:main.AccountDTO,arg2:string,arg3:Array<string>):Promise<string>;

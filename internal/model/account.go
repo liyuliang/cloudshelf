@@ -24,6 +24,10 @@ func (a *Account) IsSharePoint() bool {
 	return a.Provider == "sharepoint"
 }
 
+func (a *Account) IsRWS() bool {
+	return a.Provider == "rws"
+}
+
 // ShareExpired 报告只读分享是否已过有效期。
 func (a *Account) ShareExpired() bool {
 	return !a.ShareExpiresAt.IsZero() && !time.Now().Before(a.ShareExpiresAt)

@@ -309,6 +309,7 @@ input, textarea { user-select: text; }
   box-shadow: 0 0 8px rgba(91, 140, 255, .55);
 }
 .group-dot.sp { background: #a97bff; box-shadow: 0 0 8px rgba(169, 123, 255, .55); }
+.group-dot.rws { background: #ff7b5a; box-shadow: 0 0 8px rgba(255, 123, 90, .55); }
 .group-label { flex: 1; }
 .group-body { padding-left: 12px; }
 .account-item { margin-bottom: 2px; }
@@ -319,6 +320,7 @@ input, textarea { user-select: text; }
   box-shadow: 0 0 8px rgba(91, 140, 255, .55);
 }
 .account-dot.sp { background: #a97bff; box-shadow: 0 0 8px rgba(169, 123, 255, .55); }
+.account-dot.rws { background: #ff7b5a; box-shadow: 0 0 8px rgba(255, 123, 90, .55); }
 .account-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .empty-hint { text-align: center; padding: 26px 12px; font-size: 12px; }
 .context-menu {
@@ -471,6 +473,7 @@ input, textarea { user-select: text; }
 .tab-close:hover { background: var(--bg-active); color: var(--text); }
 .tab-dot { width: 7px; height: 7px; flex: 0 0 7px; border-radius: 50%; background: var(--accent); }
 .tab-dot.sp { background: #a97bff; }
+.tab-dot.rws { background: #ff7b5a; }
 .tab-content { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 .tab-hint { font-size: 11px; padding-bottom: 9px; }
 
@@ -631,3 +634,46 @@ input, textarea { user-select: text; }
 }
 .split-handle:hover { background: var(--accent); }
 .menu-separator { height: 1px; background: var(--border-strong); margin: 4px 6px; }
+
+/* ---- RWS 浏览 ---- */
+.browser-toolbar {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 16px; border-bottom: 1px solid var(--border);
+  flex: 0 0 auto;
+}
+.rws-study-list, .rws-detail { display: flex; flex-direction: column; height: 100%; }
+.rws-table-wrap { flex: 1; overflow: auto; padding: 0 16px 16px; }
+.rws-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.rws-table th {
+  text-align: left; padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-dim); font-weight: 600; font-size: 11px;
+  text-transform: uppercase; letter-spacing: .04em;
+  position: sticky; top: 0; background: var(--bg-main, var(--bg-panel)); z-index: 1;
+}
+.rws-table td { padding: 6px 12px; border-bottom: 1px solid rgba(39, 44, 60, .5); }
+.rws-row { cursor: pointer; transition: background .1s; }
+.rws-row:hover { background: var(--bg-hover); }
+.rws-oid { font-family: var(--font-mono, monospace); font-size: 12px; color: var(--accent); }
+.center-hint { text-align: center; padding: 32px 16px; }
+.rws-section-tabs {
+  display: flex; gap: 4px; padding: 8px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.rws-section-btn {
+  padding: 6px 16px; border-radius: var(--radius-sm);
+  background: transparent; border: 1px solid var(--border);
+  color: var(--text-dim); cursor: pointer; font-size: 12px;
+  transition: all .12s;
+}
+.rws-section-btn:hover { background: var(--bg-hover); }
+.rws-section-btn.active {
+  background: var(--accent); color: #fff;
+  border-color: var(--accent);
+}
+.rws-dataset-toolbar { padding: 8px 0; display: flex; gap: 8px; align-items: center; }
+.rws-csv-panel { margin-top: 16px; border-top: 1px solid var(--border); }
+.rws-csv-header { padding: 12px 0 8px; }
+.rws-csv-scroll { overflow: auto; max-height: 400px; }
+.rws-csv-table td { white-space: nowrap; max-width: 300px; overflow: hidden; text-overflow: ellipsis; }
+.breadcrumb-text { font-weight: 600; font-size: 13px; flex: 1; }

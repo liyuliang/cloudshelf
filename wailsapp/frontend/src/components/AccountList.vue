@@ -22,14 +22,18 @@ interface ProviderGroup {
 }
 
 const groups = computed<ProviderGroup[]>(() => {
-  const s3List = session.accounts.filter(a => a.Provider !== 'sharepoint')
+  const s3List = session.accounts.filter(a => a.Provider !== 'sharepoint' && a.Provider !== 'rws')
   const spList = session.accounts.filter(a => a.Provider === 'sharepoint')
+  const rwsList = session.accounts.filter(a => a.Provider === 'rws')
   const result: ProviderGroup[] = []
   if (s3List.length > 0) {
     result.push({ key: 's3', label: 'S3', accounts: s3List })
   }
   if (spList.length > 0) {
     result.push({ key: 'sharepoint', label: 'SharePoint', accounts: spList })
+  }
+  if (rwsList.length > 0) {
+    result.push({ key: 'rws', label: 'Rave (RWS)', accounts: rwsList })
   }
   return result
 })
@@ -76,7 +80,7 @@ function fire(name: string, acc: Account | null) {
         <div v-for="g in groups" :key="g.key" class="account-group">
           <div class="group-header" @click="toggleGroup(g.key)">
             <span class="group-arrow" :class="{ open: !isCollapsed(g.key) }">▶</span>
-            <span class="group-dot" :class="{ sp: g.key === 'sharepoint' }"></span>
+            <span class="group-dot" :class="{ sp: g.key === 'sharepoint', rws: g.key === 'rws' }"></span>
             <span class="group-label">{{ g.label }}</span>
             <span class="badge">{{ g.accounts.length }}</span>
           </div>
@@ -90,7 +94,7 @@ function fire(name: string, acc: Account | null) {
               @dblclick="fire('open-account', acc)"
               @contextmenu="contextMenu($event, acc)"
             >
-              <span class="account-dot" :class="{ sp: acc.Provider === 'sharepoint' }"></span>
+              <span class="account-dot" :class="{ sp: acc.Provider === 'sharepoint', rws: acc.Provider === 'rws' }"></span>
               <span class="account-name">{{ acc.Name }}</span>
             </div>
           </div>

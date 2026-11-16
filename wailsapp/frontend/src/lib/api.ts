@@ -16,6 +16,11 @@ export type Drive = main.DriveDTO
 export type SPItem = main.SPItemDTO
 export type SPTransferItem = main.SPTransferItemDTO
 export type ShareSession = main.ShareSessionDTO
+export type RWSStudy = main.RWSStudyDTO
+export type RWSSubject = main.RWSSubjectDTO
+export type RWSSite = main.RWSSiteDTO
+export type RWSDataset = main.RWSDatasetDTO
+export type RWSDatasetData = main.RWSDatasetDataDTO
 
 // 进度事件载荷：只通过 EventsEmit 推送，不出现在任何绑定方法签名里，
 // 所以 Wails 不会为它生成 TS 类，需要手工定义（字段与 Go 的 TransferProgressDTO 一致）。
@@ -126,6 +131,14 @@ export const api = {
     a: Account, driveID: string, driveName: string, itemPath: string,
     name: string, hours: number, password: string,
   ) => App.CreateSharePointShare(a, driveID, driveName, itemPath, name, hours, password),
+
+  // RWS 浏览
+  rwsListStudies: (a: Account) => App.RWSListStudies(a),
+  rwsListSubjects: (a: Account, studyOID: string) => App.RWSListSubjects(a, studyOID),
+  rwsListSites: (a: Account, studyOID: string) => App.RWSListSites(a, studyOID),
+  rwsListDatasets: (a: Account, studyOID: string, typ: string) => App.RWSListDatasets(a, studyOID, typ),
+  rwsGetDatasetCSV: (a: Account, studyOID: string, typ: string, dataset: string) =>
+    App.RWSGetDatasetCSV(a, studyOID, typ, dataset),
 
   // 代理
   proxyModes: () => App.ProxyModes(),

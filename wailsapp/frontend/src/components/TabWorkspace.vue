@@ -5,6 +5,8 @@ import BucketList from './BucketList.vue'
 import ObjectBrowser from './ObjectBrowser.vue'
 import SharePointDriveList from './SharePointDriveList.vue'
 import SharePointBrowser from './SharePointBrowser.vue'
+import RWSStudyList from './RWSStudyList.vue'
+import RWSStudyDetail from './RWSStudyDetail.vue'
 import PropertiesDialog from './dialogs/PropertiesDialog.vue'
 
 const browser = useBrowser()
@@ -120,7 +122,7 @@ function runItem(item: MenuItem) {
               @contextmenu.stop="tabContext($event, pane, t)"
               @mousedown.middle.prevent="browser.closeTab(t.id)"
             >
-              <span class="tab-dot" :class="{ sp: t.account.Provider === 'sharepoint' }"></span>
+              <span class="tab-dot" :class="{ sp: t.account.Provider === 'sharepoint', rws: t.account.Provider === 'rws' }"></span>
               <span class="tab-title">{{ t.title }}</span>
               <button class="tab-close" title="关闭标签" @click.stop="browser.closeTab(t.id)">×</button>
             </div>
@@ -146,6 +148,16 @@ function runItem(item: MenuItem) {
               />
               <SharePointBrowser
                 v-else-if="tabOf(pane)!.view === 'sp-objects'"
+                :key="tabOf(pane)!.id"
+                :tab="tabOf(pane)!"
+              />
+              <RWSStudyList
+                v-else-if="tabOf(pane)!.view === 'rws-studies'"
+                :key="tabOf(pane)!.id"
+                :tab="tabOf(pane)!"
+              />
+              <RWSStudyDetail
+                v-else-if="tabOf(pane)!.view === 'rws-detail'"
                 :key="tabOf(pane)!.id"
                 :tab="tabOf(pane)!"
               />

@@ -5,6 +5,7 @@ import (
 
 	"cloudshelf/internal/awss3"
 	"cloudshelf/internal/model"
+	"cloudshelf/internal/rws"
 	"cloudshelf/internal/sharepoint"
 )
 
@@ -109,6 +110,9 @@ func (a *App) TestAccount(acc AccountDTO) error {
 	m := acc.toModel()
 	if m.IsSharePoint() {
 		return sharepoint.TestConnection(spConfig(&m))
+	}
+	if m.IsRWS() {
+		return rws.TestConnection(&m)
 	}
 	return awss3.TestConnection(&m)
 }

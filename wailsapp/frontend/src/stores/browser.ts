@@ -4,9 +4,11 @@ import {
   api, errText,
   type Account, type Bucket, type S3Object,
   type Drive, type SPItem, type ShareSession,
+  type RWSStudy, type RWSSubject, type RWSSite,
+  type RWSDataset, type RWSDatasetData,
 } from '../lib/api'
 
-export type ViewKind = 'buckets' | 'objects' | 'drives' | 'sp-objects'
+export type ViewKind = 'buckets' | 'objects' | 'drives' | 'sp-objects' | 'rws-studies' | 'rws-detail'
 
 export interface BrowserTab {
   id: string
@@ -35,6 +37,16 @@ export interface BrowserTab {
   shareRootPath: string // 分享根目录，只读分享不允许回到该目录之上
   // 分享会话元数据（用于信息展示）
   shareSession?: ShareSession
+  // RWS 专用
+  rwsStudies: RWSStudy[]
+  rwsStudyOID: string
+  rwsStudyName: string
+  rwsSubjects: RWSSubject[]
+  rwsSites: RWSSite[]
+  rwsDatasets: RWSDataset[]
+  rwsDatasetData: RWSDatasetData | null
+  rwsActiveDataset: string
+  rwsDataType: string // 'regular' | 'raw'
 }
 
 
@@ -66,12 +78,13 @@ export const useBrowser = defineStore('browser', () => {
 
   function makeTab(acc: Account): BrowserTab {
     const isSP = acc.Provider === 'sharepoint'
+    const isRWS = acc.Provider === 'rws'
     return {
       id: `tab-${acc.ID}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       key: `acc:${acc.ID}`,
       title: acc.Name,
       account: acc,
-      view: isSP ? 'drives' : 'buckets',
+      view: isRWS ? 'rws-studies' : isSP ? 'drives' : 'buckets',
       bucket: '',
       prefix: '',
       buckets: [],
@@ -89,6 +102,16 @@ export const useBrowser = defineStore('browser', () => {
       spFilterText: '',
       readOnly: false,
       shareRootPath: '',
+      // RWS
+      rwsStudies: [],
+      rwsStudyOID: '',
+      rwsStudyName: '',
+      rwsSubjects: [],
+      rwsSites: [],
+      rwsDatasets: [],
+      rwsDatasetData: null,
+      rwsActiveDataset: '',
+      rwsDataType: 'regular',
     }
   }
 
@@ -131,6 +154,8 @@ export const useBrowser = defineStore('browser', () => {
     pane.activeId = tab.id
     if (acc.Provider === 'sharepoint') {
       void loadDrives(tab)
+    } else if (acc.Provider === 'rws') {
+      void loadRWSStudies(tab)
     } else {
       void loadBuckets(tab)
     }
@@ -194,6 +219,8 @@ export const useBrowser = defineStore('browser', () => {
     activePaneId.value = loc.pane.id
     if (loc.tab.account.Provider === 'sharepoint') {
       void loadDrives(copy)
+    } else if (loc.tab.account.Provider === 'rws') {
+      void loadRWSStudies(copy)
     } else {
       void loadBuckets(copy)
     }
@@ -336,6 +363,8 @@ export const useBrowser = defineStore('browser', () => {
     if (tab.view === 'buckets') return loadBuckets(tab)
     if (tab.view === 'drives') return loadDrives(tab)
     if (tab.view === 'sp-objects') return loadSPItems(tab)
+    if (tab.view === 'rws-studies') return loadRWSStudies(tab)
+    if (tab.view === 'rws-detail') return loadRWSStudyDetail(tab, tab.rwsStudyOID)
     if (tab.searchActive && tab.searchKeyword) return doSearch(tab, tab.searchKeyword)
     return navigate(tab, tab.prefix)
   }
@@ -430,6 +459,67 @@ export const useBrowser = defineStore('browser', () => {
     }
   }
 
+  // ---- RWS 浏览动作 ----
+
+  async function loadRWSStudies(tab: BrowserTab) {
+    tab.view = 'rws-studies'
+    tab.loading = true
+    tab.error = ''
+    try {
+      tab.rwsStudies = await api.rwsListStudies(tab.account)
+    } catch (e) {
+      tab.error = errText(e)
+    } finally {
+      tab.loading = false
+    }
+  }
+
+  async function loadRWSStudyDetail(tab: BrowserTab, studyOID: string) {
+    tab.view = 'rws-detail'
+    tab.rwsStudyOID = studyOID
+    const study = tab.rwsStudies.find(s => s.OID === studyOID)
+    tab.rwsStudyName = study?.Name || studyOID
+    tab.loading = true
+    tab.error = ''
+    tab.rwsDatasetData = null
+    tab.rwsActiveDataset = ''
+    try {
+      const [subjects, sites, datasets] = await Promise.all([
+        api.rwsListSubjects(tab.account, studyOID),
+        api.rwsListSites(tab.account, studyOID),
+        api.rwsListDatasets(tab.account, studyOID, tab.rwsDataType),
+      ])
+      tab.rwsSubjects = subjects
+      tab.rwsSites = sites
+      tab.rwsDatasets = datasets
+    } catch (e) {
+      tab.error = errText(e)
+    } finally {
+      tab.loading = false
+    }
+  }
+
+  async function loadRWSDatasetCSV(tab: BrowserTab, dataset: string) {
+    tab.rwsActiveDataset = dataset
+    tab.loading = true
+    tab.error = ''
+    try {
+      tab.rwsDatasetData = await api.rwsGetDatasetCSV(
+        tab.account, tab.rwsStudyOID, tab.rwsDataType, dataset,
+      )
+    } catch (e) {
+      tab.error = errText(e)
+    } finally {
+      tab.loading = false
+    }
+  }
+
+  function rwsGoBack(tab: BrowserTab) {
+    if (tab.view === 'rws-detail') {
+      void loadRWSStudies(tab)
+    }
+  }
+
   return {
     panes,
     activePaneId,
@@ -464,5 +554,10 @@ export const useBrowser = defineStore('browser', () => {
     loadSPItems,
     spNavigate,
     spGoUp,
+    // RWS
+    loadRWSStudies,
+    loadRWSStudyDetail,
+    loadRWSDatasetCSV,
+    rwsGoBack,
   }
 })

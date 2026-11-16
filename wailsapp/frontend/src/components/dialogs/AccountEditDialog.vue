@@ -40,6 +40,7 @@ async function save() {
       <select v-model="form.Provider" class="input">
         <option value="s3">S3</option>
         <option value="sharepoint">SharePoint</option>
+        <option value="rws">Rave (RWS)</option>
       </select>
     </div>
 
@@ -59,6 +60,29 @@ async function save() {
       <div class="form-row">
         <label>Site URL</label>
         <input v-model="form.SiteURL" class="input" placeholder="如 https://contoso.sharepoint.com/sites/TeamA" />
+      </div>
+    </template>
+
+    <template v-else-if="form.Provider === 'rws'">
+      <div class="form-row">
+        <label>Domain</label>
+        <input v-model="form.Region" class="input" placeholder="如 janussandbox、innovate、rave" />
+      </div>
+      <div class="form-row">
+        <label>Username</label>
+        <input v-model="form.AccessKeyID" class="input" placeholder="RWS 用户名" />
+      </div>
+      <div class="form-row">
+        <label>Password</label>
+        <input v-model="form.SecretAccessKey" class="input" type="password" placeholder="RWS 密码" />
+      </div>
+      <div class="form-row">
+        <label>Host（可选）</label>
+        <input v-model="form.Endpoint" class="input" placeholder="留空使用默认 https://%s.mdsol.com" />
+      </div>
+      <div class="form-row">
+        <label>Virtual Dir（可选）</label>
+        <input v-model="form.SiteURL" class="input" placeholder="留空使用默认 RaveWebServices" />
       </div>
     </template>
 
