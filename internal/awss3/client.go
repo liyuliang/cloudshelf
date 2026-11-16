@@ -414,12 +414,28 @@ type BucketInfo struct {
 }
 
 // HeadBucket 检查是否有权限访问该 bucket。
+// 先尝试 HeadBucket API；若失败则回退到 ListObjectsV2(MaxKeys=0)，
+// 后者对 S3 兼容服务（MinIO、Ceph 等）以及仅授予 s3:ListBucket 的 IAM 策略兼容性更好。
 func HeadBucket(a *model.Account, bucket string) error {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
 	client := newClient(a)
-	_, err := client.HeadBucket(ctx, &s3.HeadBucketInput{Bucket: &bucket})
-	return err
+
+	ctx1, cancel1 := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel1()
+	_, err := client.HeadBucket(ctx1, &s3.HeadBucketInput{Bucket: &bucket})
+	if err == nil {
+		return nil
+	}
+
+	// 回退：用 ListObjectsV2 探测访问权限（MaxKeys=1 只返回至多一个对象，开销极小）。
+	// 注意：MaxKeys 必须 ≥ 1，某些 S3 兼容服务（MinIO、Ceph 等）会拒绝 MaxKeys=0。
+	ctx2, cancel2 := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel2()
+	one := int32(1)
+	_, err2 := client.ListObjectsV2(ctx2, &s3.ListObjectsV2Input{
+		Bucket:  &bucket,
+		MaxKeys: &one,
+	})
+	return err2
 }
 
 // ListBucketsWithAccess 列出账号下的桶，并用 HeadBucket 并发检查每个桶的访问权限。

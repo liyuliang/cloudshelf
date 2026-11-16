@@ -6,7 +6,7 @@ import { api, emptyProxy, errText, type ProxyConfig, type ProxyMode } from '../.
 const emit = defineEmits<{ close: [] }>()
 const modes = ref<ProxyMode[]>([])
 const form = reactive<ProxyConfig>(emptyProxy())
-const testURL = ref('https://s3.amazonaws.com/')
+const testURL = ref('https://www.google.com.hk')
 const testing = ref(false)
 const saving = ref(false)
 const error = ref('')
@@ -99,7 +99,7 @@ async function save() {
     <div class="form-row">
       <label>测试地址</label>
       <div class="inline-row">
-        <input v-model="testURL" class="input" placeholder="如 https://s3.amazonaws.com/" />
+        <input v-model="testURL" class="input" placeholder="如 https://www.google.com.hk" />
         <button class="btn" :disabled="testing" @click="testConn">
           {{ testing ? '测试中…' : '测试连接' }}
         </button>

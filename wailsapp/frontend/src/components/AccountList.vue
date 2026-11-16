@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { useSession } from '../stores/session'
 import type { Account } from '../lib/api'
 
@@ -11,6 +11,37 @@ const emit = defineEmits<{
 const session = useSession()
 const selectedId = ref<number | null>(null)
 const ctx = ref<{ x: number; y: number; acc: Account } | null>(null)
+
+// 按 Provider 分组：折叠状态，默认全部折叠
+const collapsed = ref<Record<string, boolean>>({})
+
+interface ProviderGroup {
+  key: string
+  label: string
+  accounts: Account[]
+}
+
+const groups = computed<ProviderGroup[]>(() => {
+  const s3List = session.accounts.filter(a => a.Provider !== 'sharepoint')
+  const spList = session.accounts.filter(a => a.Provider === 'sharepoint')
+  const result: ProviderGroup[] = []
+  if (s3List.length > 0) {
+    result.push({ key: 's3', label: 'S3', accounts: s3List })
+  }
+  if (spList.length > 0) {
+    result.push({ key: 'sharepoint', label: 'SharePoint', accounts: spList })
+  }
+  return result
+})
+
+function isCollapsed(key: string): boolean {
+  // 默认折叠：未设置时返回 true
+  return collapsed.value[key] !== false
+}
+
+function toggleGroup(key: string) {
+  collapsed.value[key] = !isCollapsed(key)
+}
 
 function select(acc: Account) {
   selectedId.value = acc.ID
@@ -41,21 +72,33 @@ function fire(name: string, acc: Account | null) {
     </div>
 
     <div class="account-scroll">
-      <div
-        v-for="acc in session.accounts"
-        :key="acc.ID"
-        class="list-item account-item"
-        :class="{ active: selectedId === acc.ID }"
-        @click="select(acc)"
-        @dblclick="fire('open-account', acc)"
-        @contextmenu="contextMenu($event, acc)"
-      >
-        <span class="account-dot" :class="{ sp: acc.Provider === 'sharepoint' }"></span>
-        <span class="account-name">{{ acc.Name }}</span>
-        <span v-if="acc.Provider === 'sharepoint'" class="badge badge-accent">sp</span>
-        <span v-else class="badge">s3</span>
-      </div>
-      <p v-if="session.accounts.length === 0" class="empty-hint faint">还没有账号，点右上角 ＋ 新增</p>
+      <template v-if="groups.length > 0">
+        <div v-for="g in groups" :key="g.key" class="account-group">
+          <div class="group-header" @click="toggleGroup(g.key)">
+            <span class="group-arrow" :class="{ open: !isCollapsed(g.key) }">▶</span>
+            <span class="group-dot" :class="{ sp: g.key === 'sharepoint' }"></span>
+            <span class="group-label">{{ g.label }}</span>
+            <span class="badge">{{ g.accounts.length }}</span>
+          </div>
+          <div v-show="!isCollapsed(g.key)" class="group-body">
+            <div
+              v-for="acc in g.accounts"
+              :key="acc.ID"
+              class="list-item account-item"
+              :class="{ active: selectedId === acc.ID }"
+              @click="select(acc)"
+              @dblclick="fire('open-account', acc)"
+              @contextmenu="contextMenu($event, acc)"
+            >
+              <span class="account-dot" :class="{ sp: acc.Provider === 'sharepoint' }"></span>
+              <span class="account-name">{{ acc.Name }}</span>
+            </div>
+          </div>
+        </div>
+      </template>
+      <p v-else class="empty-hint faint">
+        还没有账号，点右上角 ＋ 新增
+      </p>
     </div>
 
     <div

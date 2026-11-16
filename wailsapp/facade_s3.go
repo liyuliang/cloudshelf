@@ -67,13 +67,13 @@ func toAccount(d AccountDTO) *model.Account {
 // ---- Bucket 列表 ----
 
 func (a *App) ListBuckets(acc AccountDTO) ([]BucketDTO, error) {
-	infos, err := awss3.ListBucketsWithAccess(toAccount(acc))
+	names, err := awss3.ListBuckets(toAccount(acc))
 	if err != nil {
 		return nil, err
 	}
-	out := make([]BucketDTO, 0, len(infos))
-	for _, b := range infos {
-		out = append(out, BucketDTO{Name: b.Name, Accessible: b.Accessible})
+	out := make([]BucketDTO, 0, len(names))
+	for _, name := range names {
+		out = append(out, BucketDTO{Name: name, Accessible: true})
 	}
 	return out, nil
 }
