@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useBrowser, type BrowserTab } from '../stores/browser'
 import type { Bucket } from '../lib/api'
 
@@ -6,15 +7,25 @@ const props = defineProps<{ tab: BrowserTab }>()
 const emit = defineEmits<{ properties: [title: string, rows: [string, string][]] }>()
 const browser = useBrowser()
 
+// 已完成检测的可访问桶数
+const accessibleCount = computed(() => props.tab.buckets.filter(b => b.Accessible).length)
+// 仍在检测中的桶数
+const checkingCount = computed(() => props.tab.buckets.filter(b => !b.Checked).length)
+
+function isChecked(b: Bucket): boolean {
+  return !!b.Checked
+}
+
 function open(b: Bucket) {
   if (!b.Accessible) return
   void browser.openBucket(props.tab, b.Name)
 }
 
 function showProps(b: Bucket) {
+  const status = !isChecked(b) ? '检测中…' : b.Accessible ? '可访问' : '无权限'
   emit('properties', 'Bucket 属性', [
     ['名称', b.Name],
-    ['访问权限', b.Accessible ? '可访问' : '无权限'],
+    ['访问权限', status],
   ])
 }
 </script>
@@ -24,7 +35,9 @@ function showProps(b: Bucket) {
     <div class="content-head">
       <div>
         <div class="content-title">{{ tab.title }} — Bucket 列表</div>
-        <div class="faint">共 {{ tab.buckets.length }} 个 Bucket，双击可访问的桶进入</div>
+        <div class="faint">
+          共 {{ tab.buckets.length }} 个 Bucket<span v-if="accessibleCount">，{{ accessibleCount }} 个可访问</span><span v-if="checkingCount" class="muted">，{{ checkingCount }} 个检测中…</span>
+        </div>
       </div>
       <button class="btn" :disabled="tab.loading" @click="browser.loadBuckets(tab)">刷新</button>
     </div>
@@ -43,7 +56,8 @@ function showProps(b: Bucket) {
           @contextmenu.prevent="showProps(b)"
         >
           <span class="cell-main"><span class="row-icon">🪣</span>{{ b.Name }}</span>
-          <span :class="b.Accessible ? 'perm-ok' : 'perm-no'">
+          <span v-if="!isChecked(b)" class="perm-checking">⏳ 检测中…</span>
+          <span v-else :class="b.Accessible ? 'perm-ok' : 'perm-no'">
             {{ b.Accessible ? '✓ 可访问' : '✗ 无权限' }}
           </span>
         </div>

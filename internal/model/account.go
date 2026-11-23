@@ -10,6 +10,7 @@ type Account struct {
 	Region          string
 	AccessKeyID     string
 	SecretAccessKey string // 加密后的密文（base64）
+	Bucket          string // S3: 指定桶名（留空则列出全部）
 	UsePathStyle    bool
 	TenantID        string // SharePoint: Azure AD 租户 ID
 	ClientID        string // SharePoint: 应用注册客户端 ID

@@ -103,6 +103,10 @@ async function save() {
         <label>Secret Access Key</label>
         <input v-model="form.SecretAccessKey" class="input" type="password" />
       </div>
+      <div class="form-row">
+        <label>Bucket（可选）</label>
+        <input v-model="form.Bucket" class="input" placeholder="留空列出全部 Bucket；填写则只显示指定桶" />
+      </div>
       <label class="checkbox-row">
         <input v-model="form.UsePathStyle" type="checkbox" />
         使用 Path-Style（兼容 MinIO 等）

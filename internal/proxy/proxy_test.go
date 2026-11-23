@@ -9,6 +9,8 @@ import (
 	"runtime"
 	"testing"
 	"time"
+
+	"cloudshelf/internal/reqlog"
 )
 
 func TestProxyURL(t *testing.T) {
@@ -157,11 +159,11 @@ func TestApplyLocked(t *testing.T) {
 	if cur.Mode != ModeHTTP || client == nil {
 		t.Fatalf("应用后状态不完整: %+v", cur)
 	}
-	if fn := client.Transport.(*http.Transport).Proxy; fn == nil {
+	if fn := reqlog.UnwrapTransport(client.Transport).(*http.Transport).Proxy; fn == nil {
 		t.Fatal("http 代理模式应有代理函数")
 	}
 	applyLocked(Config{Mode: ModeNone})
-	if fn := client.Transport.(*http.Transport).Proxy; fn != nil {
+	if fn := reqlog.UnwrapTransport(client.Transport).(*http.Transport).Proxy; fn != nil {
 		t.Fatal("直连模式代理函数应为 nil")
 	}
 }

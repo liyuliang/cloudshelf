@@ -39,7 +39,7 @@ const groups = computed<ProviderGroup[]>(() => {
 })
 
 function isCollapsed(key: string): boolean {
-  // 默认折叠：未设置时返回 true
+  // 默认折叠：未设置时返回 true，用户手动展开后记住状态
   return collapsed.value[key] !== false
 }
 

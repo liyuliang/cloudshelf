@@ -8,6 +8,7 @@ export namespace main {
 	    Region: string;
 	    AccessKeyID: string;
 	    SecretAccessKey: string;
+	    Bucket: string;
 	    UsePathStyle: boolean;
 	    TenantID: string;
 	    ClientID: string;
@@ -27,6 +28,7 @@ export namespace main {
 	        this.Region = source["Region"];
 	        this.AccessKeyID = source["AccessKeyID"];
 	        this.SecretAccessKey = source["SecretAccessKey"];
+	        this.Bucket = source["Bucket"];
 	        this.UsePathStyle = source["UsePathStyle"];
 	        this.TenantID = source["TenantID"];
 	        this.ClientID = source["ClientID"];
@@ -37,6 +39,7 @@ export namespace main {
 	export class BucketDTO {
 	    Name: string;
 	    Accessible: boolean;
+	    Checked: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new BucketDTO(source);
@@ -46,6 +49,7 @@ export namespace main {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.Name = source["Name"];
 	        this.Accessible = source["Accessible"];
+	        this.Checked = source["Checked"];
 	    }
 	}
 	export class DriveDTO {

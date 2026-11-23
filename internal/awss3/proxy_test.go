@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"strconv"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -16,6 +17,7 @@ import (
 
 	"cloudshelf/internal/model"
 	"cloudshelf/internal/proxy"
+	"cloudshelf/internal/reqlog"
 )
 
 // TestAWSHTTPClientUsesProxy 验证注入给 AWS SDK 的 HTTP 客户端确实把请求发给
@@ -125,5 +127,56 @@ func TestAWSHTTPClientDirect(t *testing.T) {
 	resp.Body.Close()
 	if resp.StatusCode != http.StatusNoContent {
 		t.Fatalf("状态码 = %d", resp.StatusCode)
+	}
+}
+
+// TestCheckBucketAccessProbeLogging 验证权限探测改造：每个桶只发一次 GET
+// （HEAD + 回退的双请求已合并），且 reqlog.WithProbe 的 context 标记能随
+// AWS SDK 传到最终的 *http.Request，日志条目被归类为 KindProbe。
+func TestCheckBucketAccessProbeLogging(t *testing.T) {
+	var calls atomic.Int32
+	var gotMethod atomic.Value
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		calls.Add(1)
+		gotMethod.Store(r.Method)
+		w.WriteHeader(http.StatusForbidden)
+	}))
+	defer srv.Close()
+
+	var mu sync.Mutex
+	var entries []reqlog.Entry
+	off := reqlog.Subscribe(func(e reqlog.Entry) {
+		mu.Lock()
+		entries = append(entries, e)
+		mu.Unlock()
+	})
+	defer off()
+
+	cli := newClientWithProxy(&model.Account{
+		Endpoint:        srv.URL,
+		Region:          "us-east-1",
+		UsePathStyle:    true,
+		AccessKeyID:     "AK",
+		SecretAccessKey: "SK",
+	}, proxy.Config{Mode: proxy.ModeNone})
+
+	if err := checkBucketAccess(context.Background(), cli, "demo"); err == nil {
+		t.Fatal("403 应当返回错误")
+	}
+	off()
+
+	if n := calls.Load(); n != 1 {
+		t.Errorf("探测请求次数 = %d，期望 1", n)
+	}
+	if m := gotMethod.Load(); m != http.MethodGet {
+		t.Errorf("探测方法 = %v，期望 GET", m)
+	}
+	mu.Lock()
+	defer mu.Unlock()
+	if len(entries) != 1 {
+		t.Fatalf("日志条目数 = %d，期望 1", len(entries))
+	}
+	if e := entries[0]; e.Kind != reqlog.KindProbe || e.Status != http.StatusForbidden {
+		t.Errorf("日志条目 = %+v，期望 Kind=%q 且 Status=403", e, reqlog.KindProbe)
 	}
 }

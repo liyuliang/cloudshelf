@@ -311,7 +311,7 @@ func TestCompatProxyConfig(t *testing.T) {
 // TestFacadeDTOConversion 断言 facade 的 DTO 转换不丢任何字段（绑定层唯一的数据变形）。
 func TestFacadeDTOConversion(t *testing.T) {
 	a := model.Account{ID: 7, Name: "n", Provider: "sharepoint", Endpoint: "e", Region: "r",
-		AccessKeyID: "AK", SecretAccessKey: "SK", UsePathStyle: true,
+		AccessKeyID: "AK", SecretAccessKey: "SK", Bucket: "my-bucket", UsePathStyle: true,
 		TenantID: "T", ClientID: "C", ClientSecret: "CS", SiteURL: "https://x"}
 	back := accountToDTO(a).toModel()
 	if !reflect.DeepEqual(a, back) {

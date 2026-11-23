@@ -19,6 +19,7 @@ import (
 
 	"cloudshelf/internal/model"
 	"cloudshelf/internal/proxy"
+	"cloudshelf/internal/reqlog"
 )
 
 // awsHTTPClient 缓存带代理配置的 HTTP 客户端：代理配置不变时复用同一个实例，
@@ -33,9 +34,10 @@ func awsHTTPClientFor(c proxy.Config) aws.HTTPClient {
 	awsHTTPMu.Lock()
 	defer awsHTTPMu.Unlock()
 	if awsHTTPClient == nil || awsHTTPConfig != c {
-		awsHTTPClient = awshttp.NewBuildableClient().WithTransportOptions(func(tr *http.Transport) {
+		base := awshttp.NewBuildableClient().WithTransportOptions(func(tr *http.Transport) {
 			tr.Proxy = proxy.ProxyFuncFor(c)
 		})
+		awsHTTPClient = reqlog.WrapDoer(base)
 		awsHTTPConfig = c
 	}
 	return awsHTTPClient
@@ -413,49 +415,83 @@ type BucketInfo struct {
 	Accessible bool
 }
 
-// HeadBucket 检查是否有权限访问该 bucket。
-// 先尝试 HeadBucket API；若失败则回退到 ListObjectsV2(MaxKeys=0)，
-// 后者对 S3 兼容服务（MinIO、Ceph 等）以及仅授予 s3:ListBucket 的 IAM 策略兼容性更好。
-func HeadBucket(a *model.Account, bucket string) error {
-	client := newClient(a)
-
-	ctx1, cancel1 := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel1()
-	_, err := client.HeadBucket(ctx1, &s3.HeadBucketInput{Bucket: &bucket})
-	if err == nil {
-		return nil
-	}
-
-	// 回退：用 ListObjectsV2 探测访问权限（MaxKeys=1 只返回至多一个对象，开销极小）。
-	// 注意：MaxKeys 必须 ≥ 1，某些 S3 兼容服务（MinIO、Ceph 等）会拒绝 MaxKeys=0。
-	ctx2, cancel2 := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel2()
+// checkBucketAccess 用一次 ListObjectsV2(MaxKeys=1) 探测 bucket 的访问权限。
+// 不再用 HeadBucket：MinIO/Ceph 等 S3 兼容服务常直接拒绝 HEAD，而 GET 列表在
+// AWS S3 与各类兼容服务上都能工作；旧实现「HEAD 失败再回退 GET」会让每个
+// 无权限桶产生两条 403，这里合并为一条。ctx 会带上 reqlog.WithProbe 标记，
+// 使日志面板把这些 403 归为预期探测而非错误。
+func checkBucketAccess(ctx context.Context, client *s3.Client, bucket string) error {
+	ctx, cancel := context.WithTimeout(reqlog.WithProbe(ctx), 10*time.Second)
+	defer cancel()
 	one := int32(1)
-	_, err2 := client.ListObjectsV2(ctx2, &s3.ListObjectsV2Input{
+	_, err := client.ListObjectsV2(ctx, &s3.ListObjectsV2Input{
 		Bucket:  &bucket,
 		MaxKeys: &one,
 	})
-	return err2
+	return err
 }
 
-// ListBucketsWithAccess 列出账号下的桶，并用 HeadBucket 并发检查每个桶的访问权限。
+const (
+	// probeConcurrency 限制权限探测的并发数，桶多时不至于瞬间打出一大片请求。
+	probeConcurrency = 8
+	// probeBatchTimeout 整批探测的总时限，避免限流后个别桶的超时被逐批放大。
+	probeBatchTimeout = 30 * time.Second
+)
+
+// ListBucketsWithAccess 列出账号下的桶，并并发探测每个桶的访问权限。
 func ListBucketsWithAccess(a *model.Account) ([]BucketInfo, error) {
 	names, err := ListBuckets(a)
 	if err != nil {
 		return nil, err
 	}
-	infos := make([]BucketInfo, len(names))
+	return ProbeBucketsAccess(a, names), nil
+}
+
+// CheckOneBucket 探测单个指定桶的访问权限，返回是否可访问。
+func CheckOneBucket(a *model.Account, bucket string) bool {
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	return checkBucketAccess(ctx, newClient(a), bucket) == nil
+}
+
+// ProbeBucketsAccessStream 并发探测一批桶的访问权限，每完成一个就通过 channel 推送结果。
+// channel 在所有探测完成后关闭。
+func ProbeBucketsAccessStream(a *model.Account, names []string) <-chan BucketInfo {
+	ch := make(chan BucketInfo, len(names))
+	client := newClient(a)
+	batchCtx, cancelBatch := context.WithTimeout(context.Background(), probeBatchTimeout)
+	sem := make(chan struct{}, probeConcurrency)
 	var wg sync.WaitGroup
-	for i, name := range names {
-		infos[i].Name = name
+	for _, name := range names {
 		wg.Add(1)
-		go func(idx int, b string) {
+		go func(b string) {
 			defer wg.Done()
-			infos[idx].Accessible = HeadBucket(a, b) == nil
-		}(i, name)
+			sem <- struct{}{}
+			defer func() { <-sem }()
+			ok := checkBucketAccess(batchCtx, client, b) == nil
+			ch <- BucketInfo{Name: b, Accessible: ok}
+		}(name)
 	}
-	wg.Wait()
-	return infos, nil
+	go func() {
+		wg.Wait()
+		cancelBatch()
+		close(ch)
+	}()
+	return ch
+}
+
+// ProbeBucketsAccess 并发探测一批桶的访问权限，全部完成后按原始顺序返回结果。
+func ProbeBucketsAccess(a *model.Account, names []string) []BucketInfo {
+	ch := ProbeBucketsAccessStream(a, names)
+	lookup := make(map[string]bool, len(names))
+	for info := range ch {
+		lookup[info.Name] = info.Accessible
+	}
+	infos := make([]BucketInfo, len(names))
+	for i, name := range names {
+		infos[i] = BucketInfo{Name: name, Accessible: lookup[name]}
+	}
+	return infos
 }
 
 // ListBuckets 返回账号下的桶名列表。

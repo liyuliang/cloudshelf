@@ -23,6 +23,7 @@ import (
 	"golang.org/x/net/http/httpproxy"
 
 	"cloudshelf/internal/appdir"
+	"cloudshelf/internal/reqlog"
 )
 
 // 代理模式（配置文件里的 mode 取值）。
@@ -151,7 +152,7 @@ func ProxyFuncFor(c Config) func(*http.Request) (*url.URL, error) {
 func clientFor(c Config) *http.Client {
 	tr := http.DefaultTransport.(*http.Transport).Clone()
 	tr.Proxy = ProxyFuncFor(c)
-	return &http.Client{Transport: tr}
+	return &http.Client{Transport: reqlog.WrapTransport(tr)}
 }
 
 // ==================== 持久化 ====================

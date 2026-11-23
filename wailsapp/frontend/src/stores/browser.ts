@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
-import { computed, ref } from 'vue'
+import { computed, reactive, ref } from 'vue'
+import { EventsOn } from '../../wailsjs/runtime/runtime'
 import {
   api, errText,
   type Account, type Bucket, type S3Object,
@@ -62,6 +63,25 @@ export const useBrowser = defineStore('browser', () => {
   const activePaneId = ref('pane-0')
   const splitOffset = ref(0.5)
 
+  // 监听后台逐个桶权限探测事件，实时更新 bucket 列表状态
+  EventsOn('bucket:access', (...args: unknown[]) => {
+    const first = args.length === 1 ? args[0] : args
+    const e = (Array.isArray(first) ? first[0] : first) as
+      { AccountID: number; Bucket: string; Accessible: boolean } | undefined
+    if (!e || !e.Bucket) return
+    for (const pane of panes.value) {
+      for (const tab of pane.tabs) {
+        if (tab.account.ID === e.AccountID && tab.view === 'buckets') {
+          const b = tab.buckets.find(bk => bk.Name === e.Bucket)
+          if (b) {
+            b.Accessible = e.Accessible
+            b.Checked = true
+          }
+        }
+      }
+    }
+  })
+
   const activePane = computed(
     () => panes.value.find((p) => p.id === activePaneId.value) ?? panes.value[0],
   )
@@ -76,10 +96,14 @@ export const useBrowser = defineStore('browser', () => {
     return p.tabs.find((t) => t.id === p.activeId) ?? null
   }
 
+  // 必须返回 reactive 对象：makeTab 的结果会被 push 进 panes（深层响应式数组），
+  // 组件读到的是 push 后由 Vue 生成的响应式代理。若这里返回普通对象，loadBuckets 等
+  // 拿到的将是原始对象，对它的写入不会触发重渲染——界面永远停在「正在加载…」，
+  // 桶列表、错误信息都不会显示。reactive 保证 push 的就是同一个代理。
   function makeTab(acc: Account): BrowserTab {
     const isSP = acc.Provider === 'sharepoint'
     const isRWS = acc.Provider === 'rws'
-    return {
+    return reactive({
       id: `tab-${acc.ID}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       key: `acc:${acc.ID}`,
       title: acc.Name,
@@ -112,7 +136,7 @@ export const useBrowser = defineStore('browser', () => {
       rwsDatasetData: null,
       rwsActiveDataset: '',
       rwsDataType: 'regular',
-    }
+    })
   }
 
 

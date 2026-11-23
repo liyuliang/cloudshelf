@@ -43,6 +43,7 @@ export function emptyAccount(): Account {
     Region: '',
     AccessKeyID: '',
     SecretAccessKey: '',
+    Bucket: '',
     UsePathStyle: false,
     TenantID: '',
     ClientID: '',

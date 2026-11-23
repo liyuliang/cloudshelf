@@ -20,6 +20,7 @@ type AccountDTO struct {
 	Region          string
 	AccessKeyID     string
 	SecretAccessKey string
+	Bucket          string
 	UsePathStyle    bool
 	TenantID        string
 	ClientID        string
@@ -36,6 +37,7 @@ func accountToDTO(a model.Account) AccountDTO {
 		Region:          a.Region,
 		AccessKeyID:     a.AccessKeyID,
 		SecretAccessKey: a.SecretAccessKey,
+		Bucket:          a.Bucket,
 		UsePathStyle:    a.UsePathStyle,
 		TenantID:        a.TenantID,
 		ClientID:        a.ClientID,
@@ -53,6 +55,7 @@ func (d AccountDTO) toModel() model.Account {
 		Region:          d.Region,
 		AccessKeyID:     d.AccessKeyID,
 		SecretAccessKey: d.SecretAccessKey,
+		Bucket:          d.Bucket,
 		UsePathStyle:    d.UsePathStyle,
 		TenantID:        d.TenantID,
 		ClientID:        d.ClientID,

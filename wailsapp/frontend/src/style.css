@@ -525,6 +525,7 @@ input, textarea { user-select: text; }
 .row-check-placeholder { flex: 0 0 13px; }
 .perm-ok { color: var(--success); text-align: right; font-size: 11px; }
 .perm-no { color: var(--text-faint); text-align: right; font-size: 11px; }
+.perm-checking { color: var(--warn); text-align: right; font-size: 11px; }
 
 /* ===== P2：对象浏览器顶部 ===== */
 .browser-top {
@@ -677,3 +678,111 @@ input, textarea { user-select: text; }
 .rws-csv-scroll { overflow: auto; max-height: 400px; }
 .rws-csv-table td { white-space: nowrap; max-width: 300px; overflow: hidden; text-overflow: ellipsis; }
 .breadcrumb-text { font-weight: 600; font-size: 13px; flex: 1; }
+
+/* ===== 请求日志面板 ===== */
+.log-panel {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--border);
+  background: var(--bg-panel);
+}
+.log-panel.expanded { max-height: 220px; }
+.log-head {
+  height: 30px;
+  flex: 0 0 30px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 14px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  user-select: none;
+  transition: background .12s;
+}
+.log-head:hover { background: var(--bg-hover); }
+.log-toggle { font-size: 9px; color: var(--text-faint); flex: 0 0 12px; }
+.log-title { color: var(--text-dim); }
+.log-head .badge { font-size: 10px; }
+.badge-err { background: rgba(248, 81, 73, .14); color: var(--danger); }
+.badge-probe { background: var(--bg-active); color: var(--text-faint); }
+.log-auto-scroll {
+  display: flex; align-items: center; gap: 4px;
+  font-size: 11px; font-weight: 400; color: var(--text-faint);
+  cursor: pointer;
+}
+.log-auto-scroll input { accent-color: var(--accent); cursor: pointer; }
+.log-clear-btn { font-size: 11px !important; padding: 2px 8px !important; }
+.log-scroll {
+  flex: 1;
+  overflow: auto;
+  padding: 4px 10px 6px;
+  font-size: 11px;
+  min-height: 0;
+}
+.log-empty { text-align: center; padding: 12px 0; font-size: 11px; }
+.log-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 4px;
+  border-radius: 3px;
+  line-height: 1.6;
+  white-space: nowrap;
+}
+.log-row:hover { background: var(--bg-hover); }
+.log-row.log-err { background: rgba(248, 81, 73, .06); }
+.log-row.log-err:hover { background: rgba(248, 81, 73, .12); }
+.log-row.log-probe { background: rgba(139, 148, 158, .05); }
+.log-time { flex: 0 0 58px; color: var(--text-faint); font-size: 10px; }
+.log-method {
+  flex: 0 0 44px;
+  font-size: 10px;
+  font-weight: 700;
+  text-align: center;
+  padding: 1px 4px;
+  border-radius: 3px;
+  background: var(--bg-active);
+  color: var(--text-dim);
+}
+.method-get { color: var(--success); background: rgba(63, 185, 80, .12); }
+.method-put { color: var(--warn); background: rgba(210, 153, 34, .12); }
+.method-del { color: var(--danger); background: rgba(248, 81, 73, .12); }
+.method-head { color: var(--accent); background: var(--accent-soft); }
+.log-status {
+  flex: 0 0 32px;
+  font-size: 10px;
+  font-weight: 600;
+  text-align: right;
+}
+.log-status.log-ok { color: var(--success); }
+.log-status.log-warn { color: var(--warn); }
+.log-status.log-err { color: var(--danger); }
+.log-status.log-probe { color: var(--text-faint); }
+.log-tag {
+  flex: 0 0 auto;
+  font-size: 9px;
+  color: var(--text-faint);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 0 4px;
+  line-height: 1.4;
+}
+.log-dur { flex: 0 0 52px; text-align: right; color: var(--text-faint); font-size: 10px; }
+.log-url {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--text-dim);
+  font-size: 11px;
+}
+.log-error {
+  flex: 0 0 auto;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--danger);
+  font-size: 10px;
+}

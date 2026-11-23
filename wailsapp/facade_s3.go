@@ -17,6 +17,7 @@ import (
 type BucketDTO struct {
 	Name       string
 	Accessible bool
+	Checked    bool // 权限探测是否已完成（false 表示正在检测中）
 }
 
 // ObjectDTO 把 awss3.Object 的 time.Time 转成展示字符串，避免绑定生成的不确定性。
@@ -66,15 +67,49 @@ func toAccount(d AccountDTO) *model.Account {
 
 // ---- Bucket 列表 ----
 
+// BucketAccessDTO 是逐个桶权限探测完成后推送到前端的事件载荷。
+type BucketAccessDTO struct {
+	AccountID  int64
+	Bucket     string
+	Accessible bool
+}
+
 func (a *App) ListBuckets(acc AccountDTO) ([]BucketDTO, error) {
-	names, err := awss3.ListBuckets(toAccount(acc))
+	ma := toAccount(acc)
+
+	// 指定了桶名：只返回这一个桶，同步探测权限后返回。
+	if ma.Bucket != "" {
+		ok := awss3.CheckOneBucket(ma, ma.Bucket)
+		return []BucketDTO{{Name: ma.Bucket, Accessible: ok, Checked: true}}, nil
+	}
+
+	// 未指定桶名：先列出所有桶名（Accessible 全为 false），立即返回；
+	// 然后后台逐个探测权限，通过事件推送逐个刷新前端状态。
+	names, err := awss3.ListBuckets(ma)
 	if err != nil {
 		return nil, err
 	}
 	out := make([]BucketDTO, 0, len(names))
 	for _, name := range names {
-		out = append(out, BucketDTO{Name: name, Accessible: true})
+		out = append(out, BucketDTO{Name: name, Accessible: false})
 	}
+
+	// 后台异步探测权限，每完成一个桶就推送事件到前端
+	go func() {
+		ch := awss3.ProbeBucketsAccessStream(ma, names)
+		for r := range ch {
+			ctx := a.runtimeCtx()
+			if ctx == nil {
+				return
+			}
+			wruntime.EventsEmit(ctx, "bucket:access", BucketAccessDTO{
+				AccountID:  acc.ID,
+				Bucket:     r.Name,
+				Accessible: r.Accessible,
+			})
+		}
+	}()
+
 	return out, nil
 }
 

@@ -5,6 +5,7 @@ import AccountList from './components/AccountList.vue'
 import UnlockGate from './components/UnlockGate.vue'
 import TabWorkspace from './components/TabWorkspace.vue'
 import TransferBar from './components/TransferBar.vue'
+import LogPanel from './components/LogPanel.vue'
 import AccountEditDialog from './components/dialogs/AccountEditDialog.vue'
 import ProxyDialog from './components/dialogs/ProxyDialog.vue'
 import SimpleDialogs from './components/dialogs/SimpleDialogs.vue'
@@ -200,6 +201,7 @@ async function onRelock() {
     </div>
 
     <TransferBar />
+    <LogPanel />
 
     <AccountEditDialog
       v-if="dialog === 'account-edit'"
