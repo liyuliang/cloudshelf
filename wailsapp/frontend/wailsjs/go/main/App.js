@@ -22,8 +22,16 @@ export function CopyText(arg1) {
   return window['go']['main']['App']['CopyText'](arg1);
 }
 
+export function CopyToClipboard(arg1) {
+  return window['go']['main']['App']['CopyToClipboard'](arg1);
+}
+
 export function CreateFolder(arg1, arg2, arg3, arg4) {
   return window['go']['main']['App']['CreateFolder'](arg1, arg2, arg3, arg4);
+}
+
+export function CreateLANShare(arg1, arg2, arg3, arg4, arg5) {
+  return window['go']['main']['App']['CreateLANShare'](arg1, arg2, arg3, arg4, arg5);
 }
 
 export function CreateS3Share(arg1, arg2, arg3, arg4, arg5) {
@@ -62,6 +70,14 @@ export function GetBucketPrefix(arg1, arg2) {
   return window['go']['main']['App']['GetBucketPrefix'](arg1, arg2);
 }
 
+export function GetLANAddresses() {
+  return window['go']['main']['App']['GetLANAddresses']();
+}
+
+export function GetLANSharePort() {
+  return window['go']['main']['App']['GetLANSharePort']();
+}
+
 export function GetProxy() {
   return window['go']['main']['App']['GetProxy']();
 }
@@ -80,6 +96,10 @@ export function ListAccounts() {
 
 export function ListBuckets(arg1) {
   return window['go']['main']['App']['ListBuckets'](arg1);
+}
+
+export function ListLANShares() {
+  return window['go']['main']['App']['ListLANShares']();
 }
 
 export function ListObjects(arg1, arg2, arg3) {
@@ -148,6 +168,10 @@ export function RWSListSubjects(arg1, arg2) {
 
 export function ReadFileB64(arg1) {
   return window['go']['main']['App']['ReadFileB64'](arg1);
+}
+
+export function RemoveLANShare(arg1) {
+  return window['go']['main']['App']['RemoveLANShare'](arg1);
 }
 
 export function ResolvePathDir(arg1, arg2, arg3) {

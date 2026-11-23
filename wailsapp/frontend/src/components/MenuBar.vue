@@ -34,7 +34,10 @@ const groups: Group[] = [
   },
   {
     name: '分享',
-    items: [{ key: 'load-share', label: '加载分享配置' }],
+    items: [
+      { key: 'load-share', label: '加载分享配置' },
+      { key: 'lan-shares', label: '局域网分享管理' },
+    ],
   },
   {
     name: '设置',

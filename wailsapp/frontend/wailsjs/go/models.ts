@@ -66,6 +66,34 @@ export namespace main {
 	        this.Name = source["Name"];
 	    }
 	}
+	export class LANShareDTO {
+	    token: string;
+	    name: string;
+	    bucket: string;
+	    prefix: string;
+	    url: string;
+	    urls: string[];
+	    createdAt: string;
+	    expiresAt: string;
+	    remaining: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new LANShareDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.token = source["token"];
+	        this.name = source["name"];
+	        this.bucket = source["bucket"];
+	        this.prefix = source["prefix"];
+	        this.url = source["url"];
+	        this.urls = source["urls"];
+	        this.createdAt = source["createdAt"];
+	        this.expiresAt = source["expiresAt"];
+	        this.remaining = source["remaining"];
+	    }
+	}
 	export class ObjectDTO {
 	    Key: string;
 	    Name: string;

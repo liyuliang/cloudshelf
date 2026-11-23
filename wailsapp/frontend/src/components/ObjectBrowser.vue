@@ -7,6 +7,7 @@ import Modal from './Modal.vue'
 import PropertiesDialog from './dialogs/PropertiesDialog.vue'
 import PresignDialog from './dialogs/PresignDialog.vue'
 import CreateShareDialog from './dialogs/CreateShareDialog.vue'
+import LANShareDialog from './dialogs/LANShareDialog.vue'
 
 const props = defineProps<{ tab: BrowserTab }>()
 const browser = useBrowser()
@@ -17,6 +18,7 @@ const checked = ref<Record<string, boolean>>({})
 const properties = ref<{ title: string; rows: [string, string][] } | null>(null)
 const presignTarget = ref<S3Object | null>(null)
 const shareDialog = ref(false)
+const lanShareDialog = ref(false)
 const folderDialog = ref(false)
 const folderName = ref('')
 const deleteStage = ref<0 | 1 | 2>(0)
@@ -282,6 +284,7 @@ async function download() {
       <button class="btn" @click="openPresign">Web URL</button>
       <button class="btn" @click="folderDialog = true">新建文件夹</button>
       <button class="btn" @click="shareDialog = true">分享只读</button>
+      <button class="btn" @click="lanShareDialog = true">🌐 局域网分享</button>
       <div class="topbar-spacer"></div>
       <span v-if="busyText" class="busy-text">{{ busyText }}</span>
     </div>
@@ -332,6 +335,15 @@ async function download() {
       :account="tab.account"
       :bucket="tab.bucket"
       @close="shareDialog = false"
+    />
+
+    <LANShareDialog
+      v-if="lanShareDialog"
+      :account="tab.account"
+      :bucket="tab.bucket"
+      :prefix="tab.prefix"
+      @close="lanShareDialog = false"
+      @notify="notify"
     />
   </div>
 </template>

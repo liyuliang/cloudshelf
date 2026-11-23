@@ -12,7 +12,11 @@ export function CheckProxy(arg1:main.ProxyDTO,arg2:string,arg3:number):Promise<s
 
 export function CopyText(arg1:string):Promise<void>;
 
+export function CopyToClipboard(arg1:string):Promise<void>;
+
 export function CreateFolder(arg1:main.AccountDTO,arg2:string,arg3:string,arg4:string):Promise<void>;
+
+export function CreateLANShare(arg1:main.AccountDTO,arg2:string,arg3:string,arg4:string,arg5:number):Promise<main.LANShareDTO>;
 
 export function CreateS3Share(arg1:main.AccountDTO,arg2:string,arg3:string,arg4:number,arg5:string):Promise<string>;
 
@@ -32,6 +36,10 @@ export function ExportAccounts(arg1:string):Promise<string>;
 
 export function GetBucketPrefix(arg1:main.AccountDTO,arg2:string):Promise<string>;
 
+export function GetLANAddresses():Promise<Array<string>>;
+
+export function GetLANSharePort():Promise<number>;
+
 export function GetProxy():Promise<main.ProxyDTO>;
 
 export function ImportAccounts(arg1:string,arg2:string):Promise<number>;
@@ -41,6 +49,8 @@ export function IsInitialized():Promise<boolean>;
 export function ListAccounts():Promise<Array<main.AccountDTO>>;
 
 export function ListBuckets(arg1:main.AccountDTO):Promise<Array<main.BucketDTO>>;
+
+export function ListLANShares():Promise<Array<main.LANShareDTO>>;
 
 export function ListObjects(arg1:main.AccountDTO,arg2:string,arg3:string):Promise<main.ObjectListDTO>;
 
@@ -75,6 +85,8 @@ export function RWSListStudies(arg1:main.AccountDTO):Promise<Array<main.RWSStudy
 export function RWSListSubjects(arg1:main.AccountDTO,arg2:string):Promise<Array<main.RWSSubjectDTO>>;
 
 export function ReadFileB64(arg1:string):Promise<string>;
+
+export function RemoveLANShare(arg1:string):Promise<void>;
 
 export function ResolvePathDir(arg1:main.AccountDTO,arg2:string,arg3:Array<string>):Promise<string>;
 

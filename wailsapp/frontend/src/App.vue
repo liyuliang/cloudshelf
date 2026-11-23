@@ -6,6 +6,7 @@ import UnlockGate from './components/UnlockGate.vue'
 import TabWorkspace from './components/TabWorkspace.vue'
 import TransferBar from './components/TransferBar.vue'
 import LogPanel from './components/LogPanel.vue'
+import LANSharePanel from './components/LANSharePanel.vue'
 import AccountEditDialog from './components/dialogs/AccountEditDialog.vue'
 import ProxyDialog from './components/dialogs/ProxyDialog.vue'
 import SimpleDialogs from './components/dialogs/SimpleDialogs.vue'
@@ -33,6 +34,7 @@ const simpleKind = computed<Kind | null>(() => {
 })
 
 const confirmState = ref<{ message: string; yes: () => void } | null>(null)
+const lanPanelOpen = ref(false)
 
 onMounted(() => session.init())
 
@@ -84,6 +86,9 @@ async function handleMenu(name: string) {
       break
     case 'load-share':
       void loadShareFromMenu()
+      break
+    case 'lan-shares':
+      lanPanelOpen.value = !lanPanelOpen.value
       break
     default:
       break
@@ -201,6 +206,7 @@ async function onRelock() {
     </div>
 
     <TransferBar />
+    <LANSharePanel v-if="lanPanelOpen" @notify="notify" />
     <LogPanel />
 
     <AccountEditDialog

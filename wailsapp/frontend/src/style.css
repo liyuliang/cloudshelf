@@ -786,3 +786,117 @@ input, textarea { user-select: text; }
   color: var(--danger);
   font-size: 10px;
 }
+
+/* ===== 局域网分享 ===== */
+.lan-tabs {
+  display: flex; gap: 4px; margin-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 8px;
+}
+.lan-tab {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 16px; border-radius: var(--radius-sm);
+  background: transparent; border: 1px solid var(--border);
+  color: var(--text-dim); cursor: pointer; font-size: 12px;
+  transition: all .12s;
+}
+.lan-tab:hover { background: var(--bg-hover); }
+.lan-tab.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+.lan-info-card {
+  background: var(--bg-base); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 10px 14px; margin-bottom: 14px;
+}
+.lan-info-row {
+  display: flex; gap: 12px; padding: 4px 0; font-size: 12px;
+}
+.lan-info-label { color: var(--text-faint); flex: 0 0 60px; }
+.lan-firewall-hint {
+  background: rgba(210, 153, 34, .1); border: 1px solid rgba(210, 153, 34, .25);
+  border-radius: var(--radius-sm); padding: 8px 12px; margin: 10px 0;
+  font-size: 11px; color: var(--warn); line-height: 1.6;
+}
+.lan-share-card {
+  background: var(--bg-base); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 12px 14px; margin-bottom: 10px;
+}
+.lan-share-head {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 6px;
+}
+.lan-share-name { font-weight: 600; font-size: 13px; }
+.lan-share-meta {
+  display: flex; gap: 16px; font-size: 11px; margin-bottom: 8px;
+}
+.lan-share-urls { margin-bottom: 8px; }
+.lan-url-row {
+  display: flex; align-items: center; gap: 6px; margin-bottom: 4px;
+}
+.lan-url-text {
+  flex: 1; min-width: 0; font-size: 11px; color: var(--accent-hover);
+  background: var(--bg-elev); padding: 4px 8px; border-radius: 4px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-family: var(--mono);
+}
+.lan-copy-btn { padding: 2px 6px !important; font-size: 13px !important; }
+.lan-share-actions { display: flex; justify-content: flex-end; }
+.btn-sm { padding: 4px 10px; font-size: 11px; }
+.lan-create, .lan-manage { min-height: 120px; }
+
+/* ===== 局域网分享管理面板 ===== */
+.lanpanel {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--border);
+  background: var(--bg-panel);
+}
+.lanpanel.expanded { max-height: 280px; }
+.lanpanel-head {
+  height: 30px;
+  flex: 0 0 30px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 14px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  user-select: none;
+  transition: background .12s;
+}
+.lanpanel-head:hover { background: var(--bg-hover); }
+.lanpanel-toggle { font-size: 9px; color: var(--text-faint); flex: 0 0 12px; }
+.lanpanel-title { color: var(--text-dim); }
+.lanpanel-head .badge { font-size: 10px; }
+.lanpanel-clear-btn { font-size: 11px !important; padding: 2px 8px !important; }
+.lanpanel-scroll {
+  flex: 1;
+  overflow: auto;
+  padding: 8px 14px 10px;
+  min-height: 0;
+}
+.lanpanel-empty { text-align: center; padding: 16px 0; font-size: 12px; }
+.lanpanel-card {
+  background: var(--bg-base); border: 1px solid var(--border);
+  border-radius: var(--radius-sm); padding: 10px 12px; margin-bottom: 8px;
+}
+.lanpanel-card-head {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 4px;
+}
+.lanpanel-card-name { font-weight: 600; font-size: 12px; }
+.lanpanel-card-meta {
+  display: flex; gap: 16px; font-size: 11px; margin-bottom: 6px;
+}
+.lanpanel-card-urls { margin-bottom: 6px; }
+.lanpanel-url-row {
+  display: flex; align-items: center; gap: 6px; margin-bottom: 3px;
+}
+.lanpanel-url-text {
+  flex: 1; min-width: 0; font-size: 11px; color: var(--accent-hover);
+  background: var(--bg-elev); padding: 3px 8px; border-radius: 4px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-family: var(--mono);
+}
+.lanpanel-copy-btn { padding: 2px 6px !important; font-size: 13px !important; }
+.lanpanel-card-actions { display: flex; justify-content: flex-end; }

@@ -24,6 +24,19 @@ export type RWSDatasetData = main.RWSDatasetDataDTO
 
 // 进度事件载荷：只通过 EventsEmit 推送，不出现在任何绑定方法签名里，
 // 所以 Wails 不会为它生成 TS 类，需要手工定义（字段与 Go 的 TransferProgressDTO 一致）。
+// LAN 分享 DTO（手工定义，字段与 Go 的 LANShareDTO JSON tag 一致）
+export interface LANShare {
+  token: string
+  name: string
+  bucket: string
+  prefix: string
+  url: string
+  urls: string[]
+  createdAt: string
+  expiresAt: string
+  remaining: string
+}
+
 export interface TransferProgress {
   ID: string
   Name: string
@@ -140,6 +153,15 @@ export const api = {
   rwsListDatasets: (a: Account, studyOID: string, typ: string) => App.RWSListDatasets(a, studyOID, typ),
   rwsGetDatasetCSV: (a: Account, studyOID: string, typ: string, dataset: string) =>
     App.RWSGetDatasetCSV(a, studyOID, typ, dataset),
+
+  // 局域网分享
+  createLANShare: (a: Account, bucket: string, prefix: string, name: string, hours: number) =>
+    App.CreateLANShare(a, bucket, prefix, name, hours),
+  listLANShares: () => App.ListLANShares(),
+  removeLANShare: (token: string) => App.RemoveLANShare(token),
+  getLANAddresses: () => App.GetLANAddresses(),
+  getLANSharePort: () => App.GetLANSharePort(),
+  copyToClipboard: (text: string) => App.CopyToClipboard(text),
 
   // 代理
   proxyModes: () => App.ProxyModes(),
