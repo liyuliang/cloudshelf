@@ -53,12 +53,15 @@ func checkWritable(c *Config) error {
 
 // Item 表示文档库中的一个文件或文件夹。
 type Item struct {
-	ID           string
-	Name         string
-	IsFolder     bool
-	Size         int64
-	LastModified time.Time
-	DownloadURL  string // 仅文件有；Graph 返回的临时直链
+	ID             string
+	Name           string
+	IsFolder       bool
+	Size           int64
+	CreatedTime    time.Time
+	LastModified   time.Time
+	CreatedBy      string // 创建者显示名
+	LastModifiedBy string // 最后修改者显示名
+	DownloadURL    string // 仅文件有；Graph 返回的临时直链
 }
 
 // tokenCache 按 ClientID+TenantID 缓存 access token，避免每次请求都走令牌端点。
@@ -229,12 +232,22 @@ func ListDrives(ctx context.Context, c *Config) ([]Drive, error) {
 	return drives, nil
 }
 
+// graphIdentity 是 Graph identitySet 中的 user 部分。
+type graphIdentity struct {
+	User *struct {
+		DisplayName string `json:"displayName"`
+	} `json:"user"`
+}
+
 // graphItem 是 Graph driveItem 的部分字段。
 type graphItem struct {
-	ID                   string    `json:"id"`
-	Name                 string    `json:"name"`
-	Size                 int64     `json:"size"`
-	LastModifiedDateTime time.Time `json:"lastModifiedDateTime"`
+	ID                   string         `json:"id"`
+	Name                 string         `json:"name"`
+	Size                 int64          `json:"size"`
+	CreatedDateTime      time.Time      `json:"createdDateTime"`
+	LastModifiedDateTime time.Time      `json:"lastModifiedDateTime"`
+	CreatedBy            *graphIdentity `json:"createdBy"`
+	LastModifiedBy       *graphIdentity `json:"lastModifiedBy"`
 	Folder               *struct {
 		ChildCount int `json:"childCount"`
 	} `json:"folder"`
@@ -242,14 +255,22 @@ type graphItem struct {
 }
 
 func (gi graphItem) toItem() Item {
-	return Item{
+	it := Item{
 		ID:           gi.ID,
 		Name:         gi.Name,
 		IsFolder:     gi.Folder != nil,
 		Size:         gi.Size,
+		CreatedTime:  gi.CreatedDateTime,
 		LastModified: gi.LastModifiedDateTime,
 		DownloadURL:  gi.DownloadURL,
 	}
+	if gi.CreatedBy != nil && gi.CreatedBy.User != nil {
+		it.CreatedBy = gi.CreatedBy.User.DisplayName
+	}
+	if gi.LastModifiedBy != nil && gi.LastModifiedBy.User != nil {
+		it.LastModifiedBy = gi.LastModifiedBy.User.DisplayName
+	}
+	return it
 }
 
 // ListChildren 列出某个 drive 下指定 itemPath（相对文档库根，空串为根）的子项。

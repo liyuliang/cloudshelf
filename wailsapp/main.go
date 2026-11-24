@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"embed"
+	"runtime"
 
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
@@ -26,14 +27,30 @@ func main() {
 		AssetServer:      &assetserver.Options{Assets: assets},
 		BackgroundColour: &options.RGBA{R: 15, G: 17, B: 23, A: 1},
 		OnStartup:        app.startup,
-		// 关闭按钮 → 最小化到系统托盘；只有托盘菜单「退出」（确认后置位
-		// quitting）才放行真正关闭。
+		// 关闭按钮 → 弹出确认对话框；托盘菜单「退出」已置位 quitting 直接放行。
 		OnBeforeClose: func(ctx context.Context) bool {
 			if app.isQuitting() {
-				return false
+				return false // 托盘退出已确认，放行
 			}
-			wruntime.Hide(ctx)
-			return true
+			// 主窗口关闭按钮：弹出确认对话框
+			defaultButton := "取消"
+			if runtime.GOOS == "windows" {
+				defaultButton = "No"
+			}
+			result, _ := wruntime.MessageDialog(ctx, wruntime.MessageDialogOptions{
+				Type:          wruntime.QuestionDialog,
+				Title:         "确认退出",
+				Message:       "确定要退出 CloudShelf 吗？",
+				Buttons:       []string{"确定", "取消"},
+				DefaultButton: defaultButton,
+			})
+			switch result {
+			case "Yes", "Ok", "OK", "确定":
+				app.markQuitting()
+				return false // 放行关闭
+			default:
+				return true // 取消关闭
+			}
 		},
 		OnShutdown: func(ctx context.Context) {
 			stopTray()

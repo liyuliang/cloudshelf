@@ -145,6 +145,7 @@ func openDB() (*sql.DB, error) {
 		`ALTER TABLE accounts ADD COLUMN client_id TEXT NOT NULL DEFAULT ''`,
 		`ALTER TABLE accounts ADD COLUMN client_secret TEXT NOT NULL DEFAULT ''`,
 		`ALTER TABLE accounts ADD COLUMN site_url TEXT NOT NULL DEFAULT ''`,
+		`ALTER TABLE accounts ADD COLUMN bucket TEXT NOT NULL DEFAULT ''`,
 	} {
 		db.Exec(stmt)
 	}
@@ -245,9 +246,9 @@ func (s *Store) AddAccount(a *model.Account) error {
 		}
 	}
 	res, err := s.db.Exec(
-		`INSERT INTO accounts (name, provider, endpoint, region, access_key_id, secret_access_key, use_path_style, tenant_id, client_id, client_secret, site_url) VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
+		`INSERT INTO accounts (name, provider, endpoint, region, access_key_id, secret_access_key, use_path_style, tenant_id, client_id, client_secret, site_url, bucket) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
 		a.Name, provider, a.Endpoint, a.Region, a.AccessKeyID, enc, boolToInt(a.UsePathStyle),
-		a.TenantID, a.ClientID, encCS, a.SiteURL,
+		a.TenantID, a.ClientID, encCS, a.SiteURL, a.Bucket,
 	)
 	if err != nil {
 		return err
@@ -258,7 +259,7 @@ func (s *Store) AddAccount(a *model.Account) error {
 }
 
 func (s *Store) ListAccounts() ([]model.Account, error) {
-	rows, err := s.db.Query(`SELECT id, name, provider, endpoint, region, access_key_id, secret_access_key, use_path_style, tenant_id, client_id, client_secret, site_url FROM accounts ORDER BY id`)
+	rows, err := s.db.Query(`SELECT id, name, provider, endpoint, region, access_key_id, secret_access_key, use_path_style, tenant_id, client_id, client_secret, site_url, bucket FROM accounts ORDER BY id`)
 	if err != nil {
 		return nil, err
 	}
@@ -267,7 +268,7 @@ func (s *Store) ListAccounts() ([]model.Account, error) {
 	for rows.Next() {
 		var a model.Account
 		var pathStyle int
-		if err := rows.Scan(&a.ID, &a.Name, &a.Provider, &a.Endpoint, &a.Region, &a.AccessKeyID, &a.SecretAccessKey, &pathStyle, &a.TenantID, &a.ClientID, &a.ClientSecret, &a.SiteURL); err != nil {
+		if err := rows.Scan(&a.ID, &a.Name, &a.Provider, &a.Endpoint, &a.Region, &a.AccessKeyID, &a.SecretAccessKey, &pathStyle, &a.TenantID, &a.ClientID, &a.ClientSecret, &a.SiteURL, &a.Bucket); err != nil {
 			return nil, err
 		}
 		a.UsePathStyle = pathStyle != 0
@@ -313,9 +314,9 @@ func (s *Store) UpdateAccount(a *model.Account) error {
 		}
 	}
 	_, err = s.db.Exec(
-		`UPDATE accounts SET name=?, provider=?, endpoint=?, region=?, access_key_id=?, secret_access_key=?, use_path_style=?, tenant_id=?, client_id=?, client_secret=?, site_url=? WHERE id=?`,
+		`UPDATE accounts SET name=?, provider=?, endpoint=?, region=?, access_key_id=?, secret_access_key=?, use_path_style=?, tenant_id=?, client_id=?, client_secret=?, site_url=?, bucket=? WHERE id=?`,
 		a.Name, provider, a.Endpoint, a.Region, a.AccessKeyID, enc, boolToInt(a.UsePathStyle),
-		a.TenantID, a.ClientID, encCS, a.SiteURL, a.ID,
+		a.TenantID, a.ClientID, encCS, a.SiteURL, a.Bucket, a.ID,
 	)
 	return err
 }
@@ -424,6 +425,7 @@ type exportAccount struct {
 	Region          string `json:"region"`
 	AccessKeyID     string `json:"access_key_id"`
 	SecretAccessKey string `json:"secret_access_key"`
+	Bucket          string `json:"bucket,omitempty"`
 	UsePathStyle    bool   `json:"use_path_style"`
 	TenantID        string `json:"tenant_id,omitempty"`
 	ClientID        string `json:"client_id,omitempty"`
@@ -464,6 +466,7 @@ func (s *Store) ExportAccounts(password string) ([]byte, error) {
 			Region:          a.Region,
 			AccessKeyID:     a.AccessKeyID,
 			SecretAccessKey: a.SecretAccessKey,
+			Bucket:          a.Bucket,
 			UsePathStyle:    a.UsePathStyle,
 			TenantID:        a.TenantID,
 			ClientID:        a.ClientID,
@@ -530,6 +533,7 @@ func (s *Store) ImportAccounts(password string, data []byte) (int, error) {
 			Region:          d.Region,
 			AccessKeyID:     d.AccessKeyID,
 			SecretAccessKey: d.SecretAccessKey,
+			Bucket:          d.Bucket,
 			UsePathStyle:    d.UsePathStyle,
 			TenantID:        d.TenantID,
 			ClientID:        d.ClientID,

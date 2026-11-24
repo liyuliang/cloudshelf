@@ -206,6 +206,7 @@ export namespace main {
 	    OID: string;
 	    Name: string;
 	    Domain: string;
+	    Type: string;
 	    Fields: RWSDatasetFieldDTO[];
 	
 	    static createFrom(source: any = {}) {
@@ -217,6 +218,7 @@ export namespace main {
 	        this.OID = source["OID"];
 	        this.Name = source["Name"];
 	        this.Domain = source["Domain"];
+	        this.Type = source["Type"];
 	        this.Fields = this.convertValues(source["Fields"], RWSDatasetFieldDTO);
 	    }
 	
@@ -241,6 +243,7 @@ export namespace main {
 	export class RWSDatasetDataDTO {
 	    Headers: string[];
 	    Rows: string[][];
+	    Type: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new RWSDatasetDataDTO(source);
@@ -250,6 +253,7 @@ export namespace main {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.Headers = source["Headers"];
 	        this.Rows = source["Rows"];
+	        this.Type = source["Type"];
 	    }
 	}
 	
@@ -306,7 +310,10 @@ export namespace main {
 	    Name: string;
 	    IsFolder: boolean;
 	    Size: number;
+	    CreatedTime: string;
 	    LastModified: string;
+	    CreatedBy: string;
+	    LastModifiedBy: string;
 	    DownloadURL: string;
 	
 	    static createFrom(source: any = {}) {
@@ -319,7 +326,10 @@ export namespace main {
 	        this.Name = source["Name"];
 	        this.IsFolder = source["IsFolder"];
 	        this.Size = source["Size"];
+	        this.CreatedTime = source["CreatedTime"];
 	        this.LastModified = source["LastModified"];
+	        this.CreatedBy = source["CreatedBy"];
+	        this.LastModifiedBy = source["LastModifiedBy"];
 	        this.DownloadURL = source["DownloadURL"];
 	    }
 	}

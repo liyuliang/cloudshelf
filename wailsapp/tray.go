@@ -88,30 +88,11 @@ func (a *App) showFromTray() {
 	wruntime.Show(ctx)
 }
 
-// quitFromTray 托盘菜单「退出」：二次确认后才真正退出。
-// 确认对话框的返回值三平台不一致（Windows/Linux 返回 Yes/No，
-// macOS 返回按钮文案），统一按确认集合判断，其余一律视为取消。
+// quitFromTray 托盘菜单「退出」：直接退出，不弹确认对话框。
+// 确认对话框只在用户点击主窗口关闭按钮时弹出（见 main.go OnBeforeClose）。
 func (a *App) quitFromTray() {
 	ctx := a.runtimeCtx()
 	if ctx == nil {
-		return
-	}
-	defaultButton := "取消"
-	if runtime.GOOS == "windows" {
-		// Windows 的 QuestionDialog 固定为 MB_YESNO，自定义按钮文案被忽略，
-		// 只有 "No" 会映射成默认按钮（默认落在「否」，防误触回车退出）。
-		defaultButton = "No"
-	}
-	result, _ := wruntime.MessageDialog(ctx, wruntime.MessageDialogOptions{
-		Type:          wruntime.QuestionDialog,
-		Title:         "确认退出",
-		Message:       "确定要退出 CloudShelf 吗？\n（关闭窗口只会最小化到托盘）",
-		Buttons:       []string{"确定", "取消"},
-		DefaultButton: defaultButton,
-	})
-	switch result {
-	case "Yes", "Ok", "OK", "确定":
-	default:
 		return
 	}
 	a.markQuitting()

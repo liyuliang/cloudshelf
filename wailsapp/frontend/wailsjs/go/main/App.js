@@ -150,8 +150,8 @@ export function RWSGetDatasetCSV(arg1, arg2, arg3, arg4) {
   return window['go']['main']['App']['RWSGetDatasetCSV'](arg1, arg2, arg3, arg4);
 }
 
-export function RWSListDatasets(arg1, arg2, arg3) {
-  return window['go']['main']['App']['RWSListDatasets'](arg1, arg2, arg3);
+export function RWSListDatasets(arg1, arg2) {
+  return window['go']['main']['App']['RWSListDatasets'](arg1, arg2);
 }
 
 export function RWSListSites(arg1, arg2) {
@@ -164,6 +164,10 @@ export function RWSListStudies(arg1) {
 
 export function RWSListSubjects(arg1, arg2) {
   return window['go']['main']['App']['RWSListSubjects'](arg1, arg2);
+}
+
+export function RWSProbeDatasetTypes(arg1, arg2, arg3) {
+  return window['go']['main']['App']['RWSProbeDatasetTypes'](arg1, arg2, arg3);
 }
 
 export function ReadFileB64(arg1) {

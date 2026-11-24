@@ -150,9 +150,11 @@ export const api = {
   rwsListStudies: (a: Account) => App.RWSListStudies(a),
   rwsListSubjects: (a: Account, studyOID: string) => App.RWSListSubjects(a, studyOID),
   rwsListSites: (a: Account, studyOID: string) => App.RWSListSites(a, studyOID),
-  rwsListDatasets: (a: Account, studyOID: string, typ: string) => App.RWSListDatasets(a, studyOID, typ),
+  rwsListDatasets: (a: Account, studyOID: string) => App.RWSListDatasets(a, studyOID),
   rwsGetDatasetCSV: (a: Account, studyOID: string, typ: string, dataset: string) =>
     App.RWSGetDatasetCSV(a, studyOID, typ, dataset),
+  rwsProbeDatasetTypes: (a: Account, studyOID: string, datasets: string[]) =>
+    App.RWSProbeDatasetTypes(a, studyOID, datasets),
 
   // 局域网分享
   createLANShare: (a: Account, bucket: string, prefix: string, name: string, hours: number) =>

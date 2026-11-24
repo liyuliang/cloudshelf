@@ -16,12 +16,15 @@ type DriveDTO struct {
 }
 
 type SPItemDTO struct {
-	ID           string
-	Name         string
-	IsFolder     bool
-	Size         int64
-	LastModified string
-	DownloadURL  string
+	ID             string
+	Name           string
+	IsFolder       bool
+	Size           int64
+	CreatedTime    string
+	LastModified   string
+	CreatedBy      string
+	LastModifiedBy string
+	DownloadURL    string
 }
 
 type SPTransferItemDTO struct {
@@ -32,17 +35,24 @@ type SPTransferItemDTO struct {
 }
 
 func spItemToDTO(it sharepoint.Item) SPItemDTO {
+	ct := ""
+	if !it.CreatedTime.IsZero() {
+		ct = it.CreatedTime.Local().Format("2006-01-02 15:04")
+	}
 	lm := ""
 	if !it.LastModified.IsZero() {
 		lm = it.LastModified.Local().Format("2006-01-02 15:04")
 	}
 	return SPItemDTO{
-		ID:           it.ID,
-		Name:         it.Name,
-		IsFolder:     it.IsFolder,
-		Size:         it.Size,
-		LastModified: lm,
-		DownloadURL:  it.DownloadURL,
+		ID:             it.ID,
+		Name:           it.Name,
+		IsFolder:       it.IsFolder,
+		Size:           it.Size,
+		CreatedTime:    ct,
+		LastModified:   lm,
+		CreatedBy:      it.CreatedBy,
+		LastModifiedBy: it.LastModifiedBy,
+		DownloadURL:    it.DownloadURL,
 	}
 }
 

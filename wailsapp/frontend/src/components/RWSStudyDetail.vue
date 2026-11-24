@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import type { BrowserTab } from '../stores/browser'
 import { useBrowser } from '../stores/browser'
 
@@ -7,6 +7,19 @@ const props = defineProps<{ tab: BrowserTab }>()
 const browser = useBrowser()
 
 const activeSection = ref<'subjects' | 'sites' | 'datasets'>('subjects')
+
+/** 从合并类型字符串（如 "raw+regular"）取第一个类型作为 CSV 请求提示 */
+function firstType(typ: string | undefined): string {
+  if (!typ) return ''
+  return typ.split('+')[0]
+}
+
+/** 为类型标签生成 CSS class（支持 raw+regular 组合） */
+function typeBadgeClass(typ: string | undefined): string {
+  if (!typ) return 'rws-type-unknown'
+  if (typ.includes('+')) return 'rws-type-both'
+  return 'rws-type-' + typ
+}
 </script>
 
 <template>
@@ -80,42 +93,44 @@ const activeSection = ref<'subjects' | 'sites' | 'datasets'>('subjects')
       </div>
 
       <!-- Datasets -->
-      <div v-if="activeSection === 'datasets'" class="rws-table-wrap">
-        <div class="rws-dataset-toolbar">
-          <select v-model="tab.rwsDataType" class="input input-sm" @change="browser.loadRWSStudyDetail(tab, tab.rwsStudyOID)">
-            <option value="regular">Regular</option>
-            <option value="raw">Raw</option>
-          </select>
+      <div v-if="activeSection === 'datasets'" class="rws-datasets-layout" :class="{ 'has-csv': tab.rwsDatasetData }">
+        <!-- 数据集列表（CSV 展开时收缩为侧边） -->
+        <div class="rws-dataset-list-pane">
+          <table class="rws-table">
+            <thead>
+              <tr><th>名称</th><th>OID</th><th>类型</th><th></th></tr>
+            </thead>
+            <tbody>
+              <tr
+                v-for="ds in tab.rwsDatasets" :key="ds.OID"
+                class="rws-row"
+                :class="{ 'rws-row-active': tab.rwsActiveDataset === ds.Name }"
+              >
+                <td><strong>{{ ds.Name }}</strong></td>
+                <td class="rws-oid">{{ ds.OID }}</td>
+                <td><span class="rws-type-badge" :class="typeBadgeClass(ds.Type)">{{ ds.Type || '—' }}</span></td>
+                <td>
+                  <button
+                    class="btn btn-sm"
+                    :disabled="tab.loading"
+                    @click="browser.loadRWSDatasetCSV(tab, ds.Name, firstType(ds.Type))"
+                  >
+                    查看
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          <p v-if="tab.rwsDatasets.length === 0" class="faint center-hint">暂无数据集定义</p>
         </div>
-        <table class="rws-table">
-          <thead>
-            <tr><th>OID</th><th>名称</th><th>Domain</th><th>字段数</th><th></th></tr>
-          </thead>
-          <tbody>
-            <tr v-for="ds in tab.rwsDatasets" :key="ds.OID" class="rws-row">
-              <td class="rws-oid">{{ ds.OID }}</td>
-              <td>{{ ds.Name }}</td>
-              <td>{{ ds.Domain }}</td>
-              <td>{{ ds.Fields?.length || 0 }}</td>
-              <td>
-                <button
-                  class="btn btn-sm"
-                  :disabled="tab.loading"
-                  @click="browser.loadRWSDatasetCSV(tab, ds.Name)"
-                >
-                  查看数据
-                </button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-        <p v-if="tab.rwsDatasets.length === 0" class="faint center-hint">暂无数据集定义</p>
 
-        <!-- Dataset CSV Data -->
-        <div v-if="tab.rwsDatasetData" class="rws-csv-panel">
+        <!-- Dataset CSV Data（展开时占据主要空间） -->
+        <div v-if="tab.rwsDatasetData" class="rws-csv-pane">
           <div class="rws-csv-header">
             <strong>{{ tab.rwsActiveDataset }}</strong>
-            <span class="faint">（{{ tab.rwsDatasetData.Rows?.length || 0 }} 行）</span>
+            <span v-if="tab.rwsDatasetData.Type" class="rws-type-badge" :class="'rws-type-' + tab.rwsDatasetData.Type">{{ tab.rwsDatasetData.Type }}</span>
+            <span class="faint">{{ tab.rwsDatasetData.Headers?.length || 0 }} 列 · {{ tab.rwsDatasetData.Rows?.length || 0 }} 行</span>
+            <button class="btn btn-sm rws-csv-close" @click="tab.rwsDatasetData = null; tab.rwsActiveDataset = ''">✕ 关闭</button>
           </div>
           <div class="rws-csv-scroll">
             <table class="rws-table rws-csv-table">

@@ -102,12 +102,22 @@ function goCrumb(path: string) {
 
 function showProps(it: SPItem) {
   const rows: [string, string][] = it.IsFolder
-    ? [['名称', it.Name], ['ID', it.ID], ['类型', '文件夹']]
+    ? [
+        ['名称', it.Name],
+        ['ID', it.ID],
+        ['类型', '文件夹'],
+        ['创建时间', it.CreatedTime || '-'],
+        ['修改时间', it.LastModified || '-'],
+        ['修改者', it.LastModifiedBy || '-'],
+      ]
     : [
         ['名称', it.Name],
         ['ID', it.ID],
         ['大小', humanSize(it.Size)],
-        ['最后修改', it.LastModified],
+        ['创建时间', it.CreatedTime || '-'],
+        ['修改时间', it.LastModified || '-'],
+        ['创建者', it.CreatedBy || '-'],
+        ['修改者', it.LastModifiedBy || '-'],
       ]
   properties.value = { title: it.IsFolder ? '文件夹属性' : '文件属性', rows }
 }
@@ -240,18 +250,18 @@ async function createFolder() {
     </div>
 
     <div class="table-wrap">
-      <div class="obj-grid table-header">
-        <span>名称</span><span>大小</span><span>类型</span><span>修改时间</span>
+      <div class="obj-grid-sp table-header">
+        <span>名称</span><span>大小</span><span>类型</span><span>创建时间</span><span>修改时间</span><span>修改者</span>
       </div>
       <div class="table-scroll">
-        <div v-if="showBack" class="obj-grid table-row back-row" @dblclick="goUp">
-          <span class="cell-main">⬆ 返回上一级</span><span></span><span></span><span></span>
+        <div v-if="showBack" class="obj-grid-sp table-row back-row" @dblclick="goUp">
+          <span class="cell-main">⬆ 返回上一级</span><span></span><span></span><span></span><span></span><span></span>
         </div>
 
         <div
           v-for="it in filteredItems"
           :key="it.ID"
-          class="obj-grid table-row"
+          class="obj-grid-sp table-row"
           :class="{ active: selectedId === it.ID }"
           @click="select(it)"
           @dblclick="open(it)"
@@ -272,7 +282,9 @@ async function createFolder() {
           </span>
           <span class="cell-meta">{{ it.IsFolder ? '' : humanSize(it.Size) }}</span>
           <span class="cell-meta">{{ it.IsFolder ? '文件夹' : '' }}</span>
+          <span class="cell-meta">{{ it.CreatedTime || '' }}</span>
           <span class="cell-meta">{{ it.LastModified || '' }}</span>
+          <span class="cell-meta cell-modifier" :title="it.LastModifiedBy || ''">{{ it.LastModifiedBy || '' }}</span>
         </div>
 
         <p v-if="tab.loading" class="empty-hint faint">正在加载…</p>

@@ -511,11 +511,15 @@ export const useBrowser = defineStore('browser', () => {
       const [subjects, sites, datasets] = await Promise.all([
         api.rwsListSubjects(tab.account, studyOID),
         api.rwsListSites(tab.account, studyOID),
-        api.rwsListDatasets(tab.account, studyOID, tab.rwsDataType),
+        api.rwsListDatasets(tab.account, studyOID),
       ])
       tab.rwsSubjects = subjects
       tab.rwsSites = sites
       tab.rwsDatasets = datasets
+      // 异步探测每个数据集的 CSV 可用类型（不阻塞主加载）
+      if (datasets.length > 0) {
+        void probeDatasetTypes(tab)
+      }
     } catch (e) {
       tab.error = errText(e)
     } finally {
@@ -523,14 +527,36 @@ export const useBrowser = defineStore('browser', () => {
     }
   }
 
-  async function loadRWSDatasetCSV(tab: BrowserTab, dataset: string) {
+  /** 后台探测数据集的 raw/regular CSV 可用性，回写到列表 */
+  async function probeDatasetTypes(tab: BrowserTab) {
+    try {
+      const names = tab.rwsDatasets.map(d => d.Name)
+      const types = await api.rwsProbeDatasetTypes(tab.account, tab.rwsStudyOID, names)
+      for (const ds of tab.rwsDatasets) {
+        if (types[ds.Name]) {
+          ds.Type = types[ds.Name]
+        }
+      }
+    } catch {
+      // 探测失败不影响正常使用，保留元数据的类型
+    }
+  }
+
+  async function loadRWSDatasetCSV(tab: BrowserTab, dataset: string, hintType?: string) {
     tab.rwsActiveDataset = dataset
     tab.loading = true
     tab.error = ''
     try {
       tab.rwsDatasetData = await api.rwsGetDatasetCSV(
-        tab.account, tab.rwsStudyOID, tab.rwsDataType, dataset,
+        tab.account, tab.rwsStudyOID, hintType || '', dataset,
       )
+      // CSV 获取成功后，将实际探测到的类型回写到数据集列表
+      if (tab.rwsDatasetData?.Type) {
+        const ds = tab.rwsDatasets.find(d => d.Name === dataset)
+        if (ds && ds.Type !== tab.rwsDatasetData.Type) {
+          ds.Type = tab.rwsDatasetData.Type
+        }
+      }
     } catch (e) {
       tab.error = errText(e)
     } finally {
