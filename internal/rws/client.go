@@ -18,8 +18,8 @@ import (
 	"sync"
 	"time"
 
-	gorws "codeup.aliyun.com/60b733f02c5969c370c5e0ab/sdk/go-rws"
-	"codeup.aliyun.com/60b733f02c5969c370c5e0ab/sdk/go-rws/odm"
+	gorws "cloudshelf/internal/gorws"
+	"cloudshelf/internal/gorws/odm"
 
 	"cloudshelf/internal/model"
 )

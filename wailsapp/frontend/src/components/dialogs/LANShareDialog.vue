@@ -1,18 +1,43 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import Modal from '../Modal.vue'
 import { api, errText, type Account, type LANShare } from '../../lib/api'
 
 const props = defineProps<{
   account: Account
-  bucket: string
-  prefix: string
+  // S3
+  bucket?: string
+  prefix?: string
+  // SharePoint
+  driveID?: string
+  driveName?: string
+  itemPath?: string
+  // RWS
+  studyOID?: string
+  studyName?: string
+  rwsPath?: string
 }>()
 const emit = defineEmits<{ close: []; notify: [msg: string] }>()
 
-const name = ref(props.prefix
-  ? `${props.bucket}/${props.prefix.replace(/\/$/, '')}`
-  : props.bucket)
+const isSharePoint = computed(() => props.account.Provider === 'sharepoint')
+const isRWS = computed(() => props.account.Provider === 'rws')
+
+function computeDefaultName(): string {
+  if (isSharePoint.value) {
+    const dName = props.driveName || props.driveID || 'SharePoint'
+    return props.itemPath ? `${dName}/${props.itemPath.replace(/\/$/, '')}` : dName
+  }
+  if (isRWS.value) {
+    const sName = props.studyName || props.studyOID
+    if (!sName) return props.account.Name
+    return props.rwsPath ? `${sName}/${props.rwsPath}` : sName
+  }
+  return props.prefix
+    ? `${props.bucket}/${props.prefix.replace(/\/$/, '')}`
+    : (props.bucket || props.account.Name)
+}
+
+const name = ref(computeDefaultName())
 const hours = ref(4)
 const busy = ref(false)
 const error = ref('')
@@ -34,7 +59,7 @@ onUnmounted(() => {
 
 async function loadShares() {
   try {
-    shares.value = await api.listLANShares() || []
+    shares.value = (await api.listLANShares()) || []
   } catch {
     // ignore
   }
@@ -44,7 +69,35 @@ async function create() {
   busy.value = true
   error.value = ''
   try {
-    const share = await api.createLANShare(props.account, props.bucket, props.prefix, name.value, hours.value)
+    let share: LANShare
+    if (isSharePoint.value) {
+      share = await api.createSharePointLANShare(
+        props.account,
+        props.driveID || '',
+        props.driveName || props.driveID || 'SharePoint',
+        props.itemPath || '',
+        name.value,
+        hours.value,
+      )
+    } else if (isRWS.value) {
+      share = await api.createRWSLANShare(
+        props.account,
+        props.studyOID || '',
+        props.studyName || props.studyOID || 'RWS',
+        props.rwsPath || '',
+        name.value,
+        hours.value,
+      )
+    } else {
+      share = await api.createLANShare(
+        props.account,
+        props.bucket || '',
+        props.prefix || '',
+        name.value,
+        hours.value,
+      )
+    }
+
     if (!firewallShown.value) {
       firewallShown.value = true
     }
@@ -101,14 +154,36 @@ async function copyURL(url: string) {
           <span class="lan-info-label">账号</span>
           <span>{{ account.Name }}</span>
         </div>
-        <div class="lan-info-row">
-          <span class="lan-info-label">Bucket</span>
-          <span class="mono">{{ bucket }}</span>
-        </div>
-        <div v-if="prefix" class="lan-info-row">
-          <span class="lan-info-label">目录</span>
-          <span class="mono">{{ prefix }}</span>
-        </div>
+        <template v-if="isSharePoint">
+          <div class="lan-info-row">
+            <span class="lan-info-label">文档库</span>
+            <span class="mono">{{ driveName || driveID }}</span>
+          </div>
+          <div v-if="itemPath" class="lan-info-row">
+            <span class="lan-info-label">目录</span>
+            <span class="mono">{{ itemPath }}</span>
+          </div>
+        </template>
+        <template v-else-if="isRWS">
+          <div class="lan-info-row">
+            <span class="lan-info-label">Study</span>
+            <span class="mono">{{ studyName || studyOID || '全部 Study' }}</span>
+          </div>
+          <div v-if="rwsPath" class="lan-info-row">
+            <span class="lan-info-label">路径</span>
+            <span class="mono">{{ rwsPath }}</span>
+          </div>
+        </template>
+        <template v-else>
+          <div class="lan-info-row">
+            <span class="lan-info-label">Bucket</span>
+            <span class="mono">{{ bucket }}</span>
+          </div>
+          <div v-if="prefix" class="lan-info-row">
+            <span class="lan-info-label">目录</span>
+            <span class="mono">{{ prefix }}</span>
+          </div>
+        </template>
       </div>
 
       <div class="form-row">
@@ -147,7 +222,10 @@ async function copyURL(url: string) {
           </span>
         </div>
         <div class="lan-share-meta">
-          <span class="faint">{{ s.bucket }}{{ s.prefix ? '/' + s.prefix : '' }}</span>
+          <span class="faint">
+            <span v-if="s.provider" class="lan-provider-badge">[{{ s.provider }}]</span>
+            {{ s.bucket }}{{ s.prefix ? '/' + s.prefix : '' }}
+          </span>
           <span class="faint">创建于 {{ s.createdAt }}</span>
         </div>
         <div class="lan-share-urls">

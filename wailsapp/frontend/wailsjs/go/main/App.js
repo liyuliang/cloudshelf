@@ -34,8 +34,16 @@ export function CreateLANShare(arg1, arg2, arg3, arg4, arg5) {
   return window['go']['main']['App']['CreateLANShare'](arg1, arg2, arg3, arg4, arg5);
 }
 
+export function CreateRWSLANShare(arg1, arg2, arg3, arg4, arg5, arg6) {
+  return window['go']['main']['App']['CreateRWSLANShare'](arg1, arg2, arg3, arg4, arg5, arg6);
+}
+
 export function CreateS3Share(arg1, arg2, arg3, arg4, arg5) {
   return window['go']['main']['App']['CreateS3Share'](arg1, arg2, arg3, arg4, arg5);
+}
+
+export function CreateSharePointLANShare(arg1, arg2, arg3, arg4, arg5, arg6) {
+  return window['go']['main']['App']['CreateSharePointLANShare'](arg1, arg2, arg3, arg4, arg5, arg6);
 }
 
 export function CreateSharePointShare(arg1, arg2, arg3, arg4, arg5, arg6, arg7) {

@@ -95,7 +95,10 @@ async function removeAll() {
           </span>
         </div>
         <div class="lanpanel-card-meta">
-          <span class="faint">{{ s.bucket }}{{ s.prefix ? '/' + s.prefix : '' }}</span>
+          <span class="faint">
+            <span v-if="s.provider" class="lan-provider-badge">[{{ s.provider }}]</span>
+            {{ s.bucket }}{{ s.prefix ? '/' + s.prefix : '' }}
+          </span>
           <span class="faint">创建于 {{ s.createdAt }}</span>
         </div>
         <div class="lanpanel-card-urls">

@@ -18,7 +18,11 @@ export function CreateFolder(arg1:main.AccountDTO,arg2:string,arg3:string,arg4:s
 
 export function CreateLANShare(arg1:main.AccountDTO,arg2:string,arg3:string,arg4:string,arg5:number):Promise<main.LANShareDTO>;
 
+export function CreateRWSLANShare(arg1:main.AccountDTO,arg2:string,arg3:string,arg4:string,arg5:string,arg6:number):Promise<main.LANShareDTO>;
+
 export function CreateS3Share(arg1:main.AccountDTO,arg2:string,arg3:string,arg4:number,arg5:string):Promise<string>;
+
+export function CreateSharePointLANShare(arg1:main.AccountDTO,arg2:string,arg3:string,arg4:string,arg5:string,arg6:number):Promise<main.LANShareDTO>;
 
 export function CreateSharePointShare(arg1:main.AccountDTO,arg2:string,arg3:string,arg4:string,arg5:string,arg6:number,arg7:string):Promise<string>;
 

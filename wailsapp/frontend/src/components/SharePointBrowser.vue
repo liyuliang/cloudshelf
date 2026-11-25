@@ -6,6 +6,7 @@ import { humanSize, spIconFor, spBreadcrumbs, spParentPath, spWithinRoot } from 
 import Modal from './Modal.vue'
 import PropertiesDialog from './dialogs/PropertiesDialog.vue'
 import CreateShareDialog from './dialogs/CreateShareDialog.vue'
+import LANShareDialog from './dialogs/LANShareDialog.vue'
 
 const props = defineProps<{ tab: BrowserTab }>()
 const browser = useBrowser()
@@ -15,6 +16,7 @@ const selectedId = ref<string | null>(null)
 const checked = ref<Record<string, boolean>>({})
 const properties = ref<{ title: string; rows: [string, string][] } | null>(null)
 const shareDialog = ref(false)
+const lanShareDialog = ref(false)
 const folderDialog = ref(false)
 const folderName = ref('')
 const deleteStage = ref<0 | 1 | 2>(0)
@@ -310,6 +312,7 @@ async function createFolder() {
         <button class="btn" @click="folderDialog = true">新建文件夹</button>
         <button class="btn" @click="shareDialog = true">分享只读</button>
       </template>
+      <button class="btn" @click="lanShareDialog = true">🌐 局域网分享</button>
       <div class="topbar-spacer"></div>
       <span v-if="busyText" class="busy-text">{{ busyText }}</span>
     </div>
@@ -354,6 +357,16 @@ async function createFolder() {
       :driveName="tab.driveName"
       :itemPath="tab.itemPath"
       @close="shareDialog = false"
+    />
+
+    <LANShareDialog
+      v-if="lanShareDialog"
+      :account="tab.account"
+      :driveID="tab.driveID"
+      :driveName="tab.driveName"
+      :itemPath="tab.itemPath"
+      @close="lanShareDialog = false"
+      @notify="notify"
     />
   </div>
 </template>

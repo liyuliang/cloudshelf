@@ -519,3 +519,68 @@ func (p *progressWriter) Write(b []byte) (int, error) {
 	}
 	return n, err
 }
+
+// GetItemByPath 获取目标路径（相对 drive 根目录）的 item 元数据。
+// 若 itemPath 为空，则获取该 drive 的根目录。
+func GetItemByPath(ctx context.Context, c *Config, driveID, itemPath string) (*Item, *graphItem, error) {
+	itemPath = strings.Trim(itemPath, "/")
+	var path string
+	if itemPath == "" {
+		path = fmt.Sprintf("/drives/%s/root", url.PathEscape(driveID))
+	} else {
+		path = fmt.Sprintf("/drives/%s/root:/%s", url.PathEscape(driveID), pathEscapeSegments(itemPath))
+	}
+	var gi graphItem
+	if err := graphGet(ctx, c, path, &gi); err != nil {
+		return nil, nil, err
+	}
+	it := gi.toItem()
+	return &it, &gi, nil
+}
+
+// OpenItemStreamByPath 打开目标文件（相对 drive 根目录）的读取流。
+// rangeHeader 可为空，非空时传入 HTTP Range 头以支持断点续传/音视频拖动/PDF分页。
+func OpenItemStreamByPath(ctx context.Context, c *Config, driveID, itemPath string, rangeHeader string) (*http.Response, *graphItem, error) {
+	_, gi, err := GetItemByPath(ctx, c, driveID, itemPath)
+	if err != nil {
+		return nil, nil, err
+	}
+	if gi.Folder != nil {
+		return nil, gi, errors.New("目标是目录而非文件")
+	}
+
+	dlURL := gi.DownloadURL
+	var req *http.Request
+	if dlURL != "" {
+		req, err = http.NewRequestWithContext(ctx, http.MethodGet, dlURL, nil)
+		if err != nil {
+			return nil, nil, err
+		}
+	} else {
+		token, err := accessToken(ctx, c)
+		if err != nil {
+			return nil, nil, err
+		}
+		itemPath = strings.Trim(itemPath, "/")
+		p := fmt.Sprintf("%s/drives/%s/root:/%s:/content", graphBase, url.PathEscape(driveID), pathEscapeSegments(itemPath))
+		req, err = http.NewRequestWithContext(ctx, http.MethodGet, p, nil)
+		if err != nil {
+			return nil, nil, err
+		}
+		req.Header.Set("Authorization", "Bearer "+token)
+	}
+
+	if rangeHeader != "" {
+		req.Header.Set("Range", rangeHeader)
+	}
+
+	resp, err := do(req)
+	if err != nil {
+		return nil, nil, err
+	}
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusPartialContent {
+		resp.Body.Close()
+		return nil, nil, fmt.Errorf("下载失败(%d)", resp.StatusCode)
+	}
+	return resp, gi, nil
+}

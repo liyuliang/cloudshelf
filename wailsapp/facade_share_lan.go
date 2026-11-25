@@ -14,8 +14,11 @@ import (
 type LANShareDTO struct {
 	Token     string   `json:"token"`
 	Name      string   `json:"name"`
+	Provider  string   `json:"provider"`
 	Bucket    string   `json:"bucket"`
 	Prefix    string   `json:"prefix"`
+	DriveID   string   `json:"driveId,omitempty"`
+	StudyOID  string   `json:"studyOid,omitempty"`
 	URL       string   `json:"url"`
 	URLs      []string `json:"urls"`
 	CreatedAt string   `json:"createdAt"`
@@ -38,8 +41,11 @@ func shareEntryToDTO(e *lanshare.ShareEntry) LANShareDTO {
 	return LANShareDTO{
 		Token:     e.Token,
 		Name:      e.Name,
+		Provider:  e.Provider,
 		Bucket:    e.Bucket,
 		Prefix:    e.Prefix,
+		DriveID:   e.DriveID,
+		StudyOID:  e.StudyOID,
 		URL:       e.URL,
 		URLs:      e.URLs,
 		CreatedAt: e.CreatedAt.Local().Format("2006-01-02 15:04"),
@@ -67,18 +73,64 @@ func ensureLANServer() (*lanshare.Server, error) {
 }
 
 // CreateLANShare 在局域网上创建一个目录级只读分享，返回分享信息（含 URL）。
+// 支持 S3、SharePoint 和 RWS。
 func (a *App) CreateLANShare(acc AccountDTO, bucket, prefix, name string, hours int) (LANShareDTO, error) {
 	srv, err := ensureLANServer()
 	if err != nil {
 		return LANShareDTO{}, err
 	}
 	ma := toAccount(acc)
-	// Make a deep copy so the share holds its own credentials
 	acctCopy := *ma
 	if hours <= 0 {
 		hours = 4
 	}
-	entry, err := srv.CreateShare(&acctCopy, bucket, prefix, name, time.Duration(hours)*time.Hour)
+	ttl := time.Duration(hours) * time.Hour
+
+	var entry *lanshare.ShareEntry
+	switch {
+	case ma.IsSharePoint():
+		entry, err = srv.CreateSharePointShare(&acctCopy, bucket, bucket, prefix, name, ttl)
+	case ma.IsRWS():
+		entry, err = srv.CreateRWSShare(&acctCopy, bucket, bucket, prefix, name, ttl)
+	default:
+		entry, err = srv.CreateShare(&acctCopy, bucket, prefix, name, ttl)
+	}
+	if err != nil {
+		return LANShareDTO{}, err
+	}
+	return shareEntryToDTO(entry), nil
+}
+
+// CreateSharePointLANShare 创建 SharePoint 目录局域网分享。
+func (a *App) CreateSharePointLANShare(acc AccountDTO, driveID, driveName, itemPath, name string, hours int) (LANShareDTO, error) {
+	srv, err := ensureLANServer()
+	if err != nil {
+		return LANShareDTO{}, err
+	}
+	ma := toAccount(acc)
+	acctCopy := *ma
+	if hours <= 0 {
+		hours = 4
+	}
+	entry, err := srv.CreateSharePointShare(&acctCopy, driveID, driveName, itemPath, name, time.Duration(hours)*time.Hour)
+	if err != nil {
+		return LANShareDTO{}, err
+	}
+	return shareEntryToDTO(entry), nil
+}
+
+// CreateRWSLANShare 创建 RWS Study 或全账号数据集局域网分享。
+func (a *App) CreateRWSLANShare(acc AccountDTO, studyOID, studyName, subPath, name string, hours int) (LANShareDTO, error) {
+	srv, err := ensureLANServer()
+	if err != nil {
+		return LANShareDTO{}, err
+	}
+	ma := toAccount(acc)
+	acctCopy := *ma
+	if hours <= 0 {
+		hours = 4
+	}
+	entry, err := srv.CreateRWSShare(&acctCopy, studyOID, studyName, subPath, name, time.Duration(hours)*time.Hour)
 	if err != nil {
 		return LANShareDTO{}, err
 	}

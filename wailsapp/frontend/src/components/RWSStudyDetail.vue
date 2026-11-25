@@ -1,12 +1,26 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onBeforeUnmount } from 'vue'
 import type { BrowserTab } from '../stores/browser'
 import { useBrowser } from '../stores/browser'
+import LANShareDialog from './dialogs/LANShareDialog.vue'
 
 const props = defineProps<{ tab: BrowserTab }>()
 const browser = useBrowser()
 
 const activeSection = ref<'subjects' | 'sites' | 'datasets'>('subjects')
+const lanShareDialog = ref(false)
+const notice = ref('')
+let noticeTimer: number | undefined
+
+function notify(msg: string) {
+  notice.value = msg
+  if (noticeTimer) window.clearTimeout(noticeTimer)
+  noticeTimer = window.setTimeout(() => (notice.value = ''), 3500)
+}
+
+onBeforeUnmount(() => {
+  if (noticeTimer) window.clearTimeout(noticeTimer)
+})
 
 /** 从合并类型字符串（如 "raw+regular"）取第一个类型作为 CSV 请求提示 */
 function firstType(typ: string | undefined): string {
@@ -27,7 +41,9 @@ function typeBadgeClass(typ: string | undefined): string {
     <div class="browser-toolbar">
       <button class="btn btn-sm" @click="browser.rwsGoBack(tab)">← 返回</button>
       <span class="breadcrumb-text">{{ tab.rwsStudyName }}</span>
+      <button class="btn btn-sm" @click="lanShareDialog = true">🌐 局域网分享</button>
       <button class="btn btn-sm" @click="browser.loadRWSStudyDetail(tab, tab.rwsStudyOID)">刷新</button>
+      <span v-if="notice" class="notice-text">{{ notice }}</span>
     </div>
 
     <p v-if="tab.loading && !tab.rwsSubjects.length" class="faint center-hint">加载中…</p>
@@ -149,5 +165,14 @@ function typeBadgeClass(typ: string | undefined): string {
         </div>
       </div>
     </template>
+
+    <LANShareDialog
+      v-if="lanShareDialog"
+      :account="tab.account"
+      :studyOID="tab.rwsStudyOID"
+      :studyName="tab.rwsStudyName"
+      @close="lanShareDialog = false"
+      @notify="notify"
+    />
   </div>
 </template>

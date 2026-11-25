@@ -69,8 +69,11 @@ export namespace main {
 	export class LANShareDTO {
 	    token: string;
 	    name: string;
+	    provider: string;
 	    bucket: string;
 	    prefix: string;
+	    driveId?: string;
+	    studyOid?: string;
 	    url: string;
 	    urls: string[];
 	    createdAt: string;
@@ -85,8 +88,11 @@ export namespace main {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.token = source["token"];
 	        this.name = source["name"];
+	        this.provider = source["provider"];
 	        this.bucket = source["bucket"];
 	        this.prefix = source["prefix"];
+	        this.driveId = source["driveId"];
+	        this.studyOid = source["studyOid"];
 	        this.url = source["url"];
 	        this.urls = source["urls"];
 	        this.createdAt = source["createdAt"];

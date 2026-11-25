@@ -210,6 +210,32 @@ input, textarea { user-select: text; }
   padding: 20px;
 }
 .dialog h2 { margin: 0 0 18px; font-size: 15px; font-weight: 650; }
+.dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+.dialog-header h2 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 650;
+}
+.dialog-close-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-faint);
+  font-size: 13px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  line-height: 1;
+  transition: all .12s;
+}
+.dialog-close-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text);
+}
 .dialog-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
 
 .error-text { color: var(--danger); font-size: 12px; }
@@ -851,6 +877,14 @@ input, textarea { user-select: text; }
   margin-bottom: 6px;
 }
 .lan-share-name { font-weight: 600; font-size: 13px; }
+.lan-provider-badge {
+  display: inline-block;
+  margin-right: 4px;
+  text-transform: uppercase;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--accent);
+}
 .lan-share-meta {
   display: flex; gap: 16px; font-size: 11px; margin-bottom: 8px;
 }

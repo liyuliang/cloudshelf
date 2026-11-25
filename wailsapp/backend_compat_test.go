@@ -66,7 +66,7 @@ func TestCompatSchema(t *testing.T) {
 
 	want := []string{
 		"id", "name", "endpoint", "region", "access_key_id", "secret_access_key",
-		"use_path_style", "provider", "tenant_id", "client_id", "client_secret", "site_url",
+		"use_path_style", "provider", "tenant_id", "client_id", "client_secret", "site_url", "bucket",
 	}
 	if !reflect.DeepEqual(cols, want) {
 		t.Fatalf("accounts 列顺序变化 = %v，期望 %v", cols, want)

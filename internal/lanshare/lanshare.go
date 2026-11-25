@@ -1,19 +1,20 @@
 // Package lanshare provides a lightweight embedded HTTP server for LAN-based
-// read-only file sharing. It acts as a reverse proxy to S3: visitors with
-// a valid token can browse directories and download files through any browser,
-// without needing CloudShelf installed or S3 credentials.
+// read-only file sharing. It acts as a reverse proxy to S3, SharePoint, and RWS:
+// visitors with a valid token can browse directories and download files through
+// any browser, without needing CloudShelf installed or cloud credentials.
 //
 // Design:
 //   - Random port on 0.0.0.0 (auto-selected by OS)
 //   - Token-protected URLs: /s/<token>/ for directory, /s/<token>/<path> for file
 //   - 4-hour auto-expiry (configurable per share)
-//   - Stream files from S3 directly (no local caching)
+//   - Stream files directly (no local caching)
 //   - Auto-detect LAN IPs for the shareable URL
 package lanshare
 
 import (
 	"context"
 	"crypto/rand"
+	"encoding/csv"
 	"encoding/hex"
 	"fmt"
 	"html/template"
@@ -33,14 +34,19 @@ import (
 
 	"cloudshelf/internal/model"
 	"cloudshelf/internal/proxy"
+	"cloudshelf/internal/rws"
+	"cloudshelf/internal/sharepoint"
 )
 
 // ShareEntry represents one active LAN share.
 type ShareEntry struct {
 	Token     string    `json:"token"`
 	Name      string    `json:"name"`      // human-friendly label
-	Bucket    string    `json:"bucket"`
-	Prefix    string    `json:"prefix"`    // directory prefix to share (may be "")
+	Provider  string    `json:"provider"`  // "s3", "sharepoint", or "rws"
+	Bucket    string    `json:"bucket"`    // S3: bucket; SP: driveName; RWS: studyName/studyOID
+	Prefix    string    `json:"prefix"`    // S3: prefix; SP: itemPath; RWS: subpath
+	DriveID   string    `json:"driveId,omitempty"`  // SharePoint: drive ID
+	StudyOID  string    `json:"studyOid,omitempty"` // RWS: study OID
 	URL       string    `json:"url"`       // full URL for the first LAN IP
 	URLs      []string  `json:"urls"`      // URLs for all detected LAN IPs
 	CreatedAt time.Time `json:"createdAt"`
@@ -51,6 +57,21 @@ type ShareEntry struct {
 // IsExpired reports whether the share has passed its expiry time.
 func (e *ShareEntry) IsExpired() bool {
 	return time.Now().After(e.ExpiresAt)
+}
+
+// crumb is a breadcrumb item for HTML navigation.
+type crumb struct {
+	Name string
+	Href string
+}
+
+// item is a file or folder row in HTML directory listing.
+type item struct {
+	Name  string
+	IsDir bool
+	Size  int64
+	Time  string
+	Href  string
 }
 
 // Server is the embedded HTTP file server for LAN sharing.
@@ -112,8 +133,7 @@ func (s *Server) Port() int {
 	return s.port
 }
 
-// CreateShare registers a new share and returns the ShareEntry with URLs.
-func (s *Server) CreateShare(acc *model.Account, bucket, prefix, name string, ttl time.Duration) (*ShareEntry, error) {
+func (s *Server) registerEntry(entry *ShareEntry, ttl time.Duration) (*ShareEntry, error) {
 	token, err := randomToken(8)
 	if err != nil {
 		return nil, err
@@ -122,15 +142,9 @@ func (s *Server) CreateShare(acc *model.Account, bucket, prefix, name string, tt
 		ttl = 4 * time.Hour
 	}
 	now := time.Now()
-	entry := &ShareEntry{
-		Token:     token,
-		Name:      name,
-		Bucket:    bucket,
-		Prefix:    prefix,
-		CreatedAt: now,
-		ExpiresAt: now.Add(ttl),
-		account:   acc,
-	}
+	entry.Token = token
+	entry.CreatedAt = now
+	entry.ExpiresAt = now.Add(ttl)
 
 	ips := LANAddresses()
 	for _, ip := range ips {
@@ -146,6 +160,44 @@ func (s *Server) CreateShare(acc *model.Account, bucket, prefix, name string, tt
 	s.shares[token] = entry
 	s.mu.Unlock()
 	return entry, nil
+}
+
+// CreateShare registers a new S3 share and returns the ShareEntry with URLs.
+func (s *Server) CreateShare(acc *model.Account, bucket, prefix, name string, ttl time.Duration) (*ShareEntry, error) {
+	entry := &ShareEntry{
+		Name:     name,
+		Provider: "s3",
+		Bucket:   bucket,
+		Prefix:   prefix,
+		account:  acc,
+	}
+	return s.registerEntry(entry, ttl)
+}
+
+// CreateSharePointShare registers a new SharePoint share and returns the ShareEntry with URLs.
+func (s *Server) CreateSharePointShare(acc *model.Account, driveID, driveName, itemPath, name string, ttl time.Duration) (*ShareEntry, error) {
+	entry := &ShareEntry{
+		Name:     name,
+		Provider: "sharepoint",
+		Bucket:   driveName,
+		Prefix:   itemPath,
+		DriveID:  driveID,
+		account:  acc,
+	}
+	return s.registerEntry(entry, ttl)
+}
+
+// CreateRWSShare registers a new RWS share and returns the ShareEntry with URLs.
+func (s *Server) CreateRWSShare(acc *model.Account, studyOID, studyName, subPath, name string, ttl time.Duration) (*ShareEntry, error) {
+	entry := &ShareEntry{
+		Name:     name,
+		Provider: "rws",
+		Bucket:   studyName,
+		Prefix:   subPath,
+		StudyOID: studyOID,
+		account:  acc,
+	}
+	return s.registerEntry(entry, ttl)
 }
 
 // RemoveShare deletes a share by token.
@@ -223,6 +275,19 @@ func (s *Server) handleShare(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	switch {
+	case entry.account.IsSharePoint():
+		s.handleSharePoint(w, r, entry, token, subPath)
+	case entry.account.IsRWS():
+		s.handleRWS(w, r, entry, token, subPath)
+	default:
+		s.handleS3(w, r, entry, token, subPath)
+	}
+}
+
+// ---- S3 Provider ----
+
+func (s *Server) handleS3(w http.ResponseWriter, r *http.Request, entry *ShareEntry, token, subPath string) {
 	fullPrefix := entry.Prefix + subPath
 
 	// If subPath ends with "/" or is empty, treat as directory listing
@@ -272,13 +337,6 @@ func (s *Server) serveDirectory(w http.ResponseWriter, r *http.Request, entry *S
 		return
 	}
 
-	type item struct {
-		Name  string
-		IsDir bool
-		Size  int64
-		Time  string
-		Href  string
-	}
 	var items []item
 
 	// Directories (CommonPrefixes)
@@ -313,7 +371,6 @@ func (s *Server) serveDirectory(w http.ResponseWriter, r *http.Request, entry *S
 	}
 
 	// Build breadcrumb
-	type crumb struct{ Name, Href string }
 	var crumbs []crumb
 	crumbs = append(crumbs, crumb{entry.Bucket, "/s/" + token + "/"})
 	if subPath != "" {
@@ -401,6 +458,377 @@ func (s *Server) serveFile(w http.ResponseWriter, r *http.Request, entry *ShareE
 	}
 
 	io.Copy(w, out.Body)
+}
+
+// ---- SharePoint Provider ----
+
+func joinSPPath(base, rel string) string {
+	b := strings.Trim(base, "/")
+	r := strings.Trim(rel, "/")
+	if b == "" {
+		return r
+	}
+	if r == "" {
+		return b
+	}
+	return b + "/" + r
+}
+
+func (s *Server) handleSharePoint(w http.ResponseWriter, r *http.Request, entry *ShareEntry, token, subPath string) {
+	if subPath == "" || strings.HasSuffix(subPath, "/") {
+		s.serveSharePointDirectory(w, r, entry, token, subPath)
+		return
+	}
+	s.serveSharePointFile(w, r, entry, token, subPath)
+}
+
+func (s *Server) serveSharePointDirectory(w http.ResponseWriter, r *http.Request, entry *ShareEntry, token, subPath string) {
+	ctx, cancel := context.WithTimeout(r.Context(), 30*time.Second)
+	defer cancel()
+
+	cfg := &sharepoint.Config{
+		TenantID:     entry.account.TenantID,
+		ClientID:     entry.account.ClientID,
+		ClientSecret: entry.account.ClientSecret,
+		SiteURL:      entry.account.SiteURL,
+		ReadOnly:     true,
+	}
+
+	curFolder := joinSPPath(entry.Prefix, subPath)
+	spItems, err := sharepoint.ListChildren(ctx, cfg, entry.DriveID, curFolder)
+	if err != nil {
+		http.Error(w, "列出目录失败: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	var items []item
+	cleanSub := strings.Trim(subPath, "/")
+	prefixHref := "/s/" + token + "/"
+	if cleanSub != "" {
+		prefixHref += cleanSub + "/"
+	}
+
+	for _, it := range spItems {
+		if it.IsFolder {
+			items = append(items, item{
+				Name:  it.Name + "/",
+				IsDir: true,
+				Href:  prefixHref + it.Name + "/",
+			})
+		} else {
+			t := ""
+			if !it.LastModified.IsZero() {
+				t = it.LastModified.Local().Format("2006-01-02 15:04")
+			}
+			items = append(items, item{
+				Name:  it.Name,
+				IsDir: false,
+				Size:  it.Size,
+				Time:  t,
+				Href:  prefixHref + it.Name,
+			})
+		}
+	}
+
+	var crumbs []crumb
+	crumbs = append(crumbs, crumb{entry.Bucket, "/s/" + token + "/"})
+	if cleanSub != "" {
+		segs := strings.Split(cleanSub, "/")
+		acc := ""
+		for _, seg := range segs {
+			if seg == "" {
+				continue
+			}
+			acc += seg + "/"
+			crumbs = append(crumbs, crumb{seg, "/s/" + token + "/" + acc})
+		}
+	}
+
+	remaining := time.Until(entry.ExpiresAt)
+	remainStr := formatDuration(remaining)
+
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	dirTmpl.Execute(w, map[string]any{
+		"Name":      entry.Name,
+		"Items":     items,
+		"Crumbs":    crumbs,
+		"Remaining": remainStr,
+		"Empty":     len(items) == 0,
+	})
+}
+
+func (s *Server) serveSharePointFile(w http.ResponseWriter, r *http.Request, entry *ShareEntry, token, subPath string) {
+	ctx, cancel := context.WithTimeout(r.Context(), 30*time.Minute)
+	defer cancel()
+
+	cfg := &sharepoint.Config{
+		TenantID:     entry.account.TenantID,
+		ClientID:     entry.account.ClientID,
+		ClientSecret: entry.account.ClientSecret,
+		SiteURL:      entry.account.SiteURL,
+		ReadOnly:     true,
+	}
+
+	targetPath := joinSPPath(entry.Prefix, subPath)
+	rangeHeader := r.Header.Get("Range")
+
+	resp, gi, err := sharepoint.OpenItemStreamByPath(ctx, cfg, entry.DriveID, targetPath, rangeHeader)
+	if err != nil {
+		if gi != nil && gi.Folder != nil {
+			http.Redirect(w, r, r.URL.Path+"/", http.StatusMovedPermanently)
+			return
+		}
+		http.Error(w, "获取文件失败: "+err.Error(), http.StatusNotFound)
+		return
+	}
+	defer resp.Body.Close()
+
+	fileName := targetPath
+	if idx := strings.LastIndex(targetPath, "/"); idx >= 0 {
+		fileName = targetPath[idx+1:]
+	}
+
+	ct := resp.Header.Get("Content-Type")
+	if ct == "" || ct == "application/octet-stream" || ct == "binary/octet-stream" {
+		ext := filepath.Ext(fileName)
+		if mt := mime.TypeByExtension(ext); mt != "" {
+			ct = mt
+		} else {
+			ct = "application/octet-stream"
+		}
+	}
+	w.Header().Set("Content-Type", ct)
+
+	if isPreviewable(ct) {
+		w.Header().Set("Content-Disposition", fmt.Sprintf("inline; filename=\"%s\"", fileName))
+	} else {
+		w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", fileName))
+	}
+
+	if resp.ContentLength > 0 {
+		w.Header().Set("Content-Length", fmt.Sprintf("%d", resp.ContentLength))
+	}
+	if rangeHeader != "" && resp.Header.Get("Content-Range") != "" {
+		w.Header().Set("Content-Range", resp.Header.Get("Content-Range"))
+		w.WriteHeader(http.StatusPartialContent)
+	}
+
+	io.Copy(w, resp.Body)
+}
+
+// ---- RWS Provider ----
+
+func (s *Server) handleRWS(w http.ResponseWriter, r *http.Request, entry *ShareEntry, token, subPath string) {
+	// If a specific Study was shared (entry.StudyOID != "")
+	if entry.StudyOID != "" {
+		s.serveRWSStudy(w, r, entry, token, entry.StudyOID, subPath, []crumb{
+			{Name: entry.Bucket, Href: "/s/" + token + "/"},
+		}, "/s/"+token+"/")
+		return
+	}
+
+	// Otherwise, entire RWS account was shared (entry.StudyOID == "")
+	cleanSub := strings.Trim(subPath, "/")
+	if cleanSub == "" {
+		if subPath != "" && !strings.HasSuffix(subPath, "/") {
+			http.Redirect(w, r, r.URL.Path+"/", http.StatusMovedPermanently)
+			return
+		}
+		s.serveRWSStudyList(w, r, entry, token)
+		return
+	}
+
+	parts := strings.SplitN(cleanSub, "/", 2)
+	studyOID := parts[0]
+	studyRelPath := ""
+	if len(parts) > 1 {
+		studyRelPath = parts[1]
+		if strings.HasSuffix(subPath, "/") && !strings.HasSuffix(studyRelPath, "/") {
+			studyRelPath += "/"
+		}
+	} else if strings.HasSuffix(subPath, "/") {
+		studyRelPath = ""
+	} else {
+		// e.g. /s/<token>/StudyOID -> redirect to /s/<token>/StudyOID/
+		http.Redirect(w, r, r.URL.Path+"/", http.StatusMovedPermanently)
+		return
+	}
+
+	baseHref := "/s/" + token + "/" + studyOID + "/"
+	crumbs := []crumb{
+		{Name: entry.Bucket, Href: "/s/" + token + "/"},
+		{Name: studyOID, Href: baseHref},
+	}
+	s.serveRWSStudy(w, r, entry, token, studyOID, studyRelPath, crumbs, baseHref)
+}
+
+func (s *Server) serveRWSStudyList(w http.ResponseWriter, r *http.Request, entry *ShareEntry, token string) {
+	studies, err := rws.ListStudies(entry.account)
+	if err != nil {
+		http.Error(w, "获取 Study 列表失败: "+err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	var items []item
+	for _, st := range studies {
+		label := st.Name
+		if label == "" {
+			label = st.OID
+		}
+		items = append(items, item{
+			Name:  label + "/",
+			IsDir: true,
+			Href:  "/s/" + token + "/" + st.OID + "/",
+		})
+	}
+
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	dirTmpl.Execute(w, map[string]any{
+		"Name":      entry.Name,
+		"Items":     items,
+		"Crumbs":    []crumb{{Name: entry.Bucket, Href: "/s/" + token + "/"}},
+		"Remaining": formatDuration(time.Until(entry.ExpiresAt)),
+		"Empty":     len(items) == 0,
+	})
+}
+
+func (s *Server) serveRWSStudy(w http.ResponseWriter, r *http.Request, entry *ShareEntry, token, studyOID, studyRelPath string, baseCrumbs []crumb, baseHref string) {
+	rel := strings.Trim(studyRelPath, "/")
+
+	// 1. Study root: list datasets/ folder, subjects.csv, sites.csv, datasets.csv
+	if rel == "" {
+		if studyRelPath != "" && !strings.HasSuffix(studyRelPath, "/") {
+			http.Redirect(w, r, r.URL.Path+"/", http.StatusMovedPermanently)
+			return
+		}
+		items := []item{
+			{Name: "datasets/", IsDir: true, Href: baseHref + "datasets/"},
+			{Name: "subjects.csv", IsDir: false, Href: baseHref + "subjects.csv"},
+			{Name: "sites.csv", IsDir: false, Href: baseHref + "sites.csv"},
+			{Name: "datasets.csv", IsDir: false, Href: baseHref + "datasets.csv"},
+		}
+
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		dirTmpl.Execute(w, map[string]any{
+			"Name":      entry.Name,
+			"Items":     items,
+			"Crumbs":    baseCrumbs,
+			"Remaining": formatDuration(time.Until(entry.ExpiresAt)),
+			"Empty":     false,
+		})
+		return
+	}
+
+	// 2. datasets/ folder: list all datasets as .csv files
+	if rel == "datasets" {
+		if !strings.HasSuffix(studyRelPath, "/") {
+			http.Redirect(w, r, r.URL.Path+"/", http.StatusMovedPermanently)
+			return
+		}
+		datasets, err := rws.ListDatasets(entry.account, studyOID)
+		if err != nil {
+			http.Error(w, "获取数据集列表失败: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		var items []item
+		for _, ds := range datasets {
+			items = append(items, item{
+				Name:  ds.Name + ".csv",
+				IsDir: false,
+				Href:  baseHref + "datasets/" + ds.Name + ".csv",
+			})
+		}
+		crumbs := append(baseCrumbs, crumb{Name: "datasets", Href: baseHref + "datasets/"})
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		dirTmpl.Execute(w, map[string]any{
+			"Name":      entry.Name,
+			"Items":     items,
+			"Crumbs":    crumbs,
+			"Remaining": formatDuration(time.Until(entry.ExpiresAt)),
+			"Empty":     len(items) == 0,
+		})
+		return
+	}
+
+	// 3. Download/view subjects.csv
+	if rel == "subjects.csv" {
+		subjects, err := rws.ListSubjects(entry.account, studyOID)
+		if err != nil {
+			http.Error(w, "获取受试者失败: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "text/csv; charset=utf-8")
+		w.Header().Set("Content-Disposition", "attachment; filename=\"subjects.csv\"")
+		w.Write([]byte{0xEF, 0xBB, 0xBF}) // UTF-8 BOM
+		cw := csv.NewWriter(w)
+		_ = cw.Write([]string{"SubjectKey", "SiteRef", "Status"})
+		for _, sb := range subjects {
+			_ = cw.Write([]string{sb.SubjectKey, sb.SiteRef, sb.Status})
+		}
+		cw.Flush()
+		return
+	}
+
+	// 4. Download/view sites.csv
+	if rel == "sites.csv" {
+		sites, err := rws.ListSites(entry.account, studyOID)
+		if err != nil {
+			http.Error(w, "获取中心失败: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "text/csv; charset=utf-8")
+		w.Header().Set("Content-Disposition", "attachment; filename=\"sites.csv\"")
+		w.Write([]byte{0xEF, 0xBB, 0xBF}) // UTF-8 BOM
+		cw := csv.NewWriter(w)
+		_ = cw.Write([]string{"OID", "Name", "StudySiteNumber"})
+		for _, st := range sites {
+			_ = cw.Write([]string{st.OID, st.Name, st.StudySiteNumber})
+		}
+		cw.Flush()
+		return
+	}
+
+	// 5. Download/view datasets.csv
+	if rel == "datasets.csv" {
+		datasets, err := rws.ListDatasets(entry.account, studyOID)
+		if err != nil {
+			http.Error(w, "获取数据集失败: "+err.Error(), http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "text/csv; charset=utf-8")
+		w.Header().Set("Content-Disposition", "attachment; filename=\"datasets.csv\"")
+		w.Write([]byte{0xEF, 0xBB, 0xBF}) // UTF-8 BOM
+		cw := csv.NewWriter(w)
+		_ = cw.Write([]string{"Name", "OID", "Domain", "Type", "FieldCount"})
+		for _, ds := range datasets {
+			_ = cw.Write([]string{ds.Name, ds.OID, ds.Domain, ds.Type, fmt.Sprintf("%d", len(ds.Fields))})
+		}
+		cw.Flush()
+		return
+	}
+
+	// 6. Download/view specific dataset: datasets/<dataset>.csv
+	if strings.HasPrefix(rel, "datasets/") {
+		fileName := strings.TrimPrefix(rel, "datasets/")
+		dsName := strings.TrimSuffix(fileName, ".csv")
+		data, err := rws.GetDatasetCSV(entry.account, studyOID, "", dsName)
+		if err != nil {
+			http.Error(w, "获取数据集数据失败: "+err.Error(), http.StatusNotFound)
+			return
+		}
+		w.Header().Set("Content-Type", "text/csv; charset=utf-8")
+		w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s.csv\"", dsName))
+		w.Write([]byte{0xEF, 0xBB, 0xBF}) // UTF-8 BOM
+		cw := csv.NewWriter(w)
+		if len(data.Headers) > 0 {
+			_ = cw.Write(data.Headers)
+		}
+		_ = cw.WriteAll(data.Rows)
+		cw.Flush()
+		return
+	}
+
+	http.NotFound(w, r)
 }
 
 // ---- LAN IP Detection ----
@@ -564,7 +992,7 @@ a.file-link:hover{color:#7aa0ff}
     {{range .Items}}
     <tr>
       <td><a class="file-link" href="{{.Href}}"><span class="icon">{{if .IsDir}}📁{{else}}📄{{end}}</span>{{.Name}}</a></td>
-      <td class="size">{{if .IsDir}}&mdash;{{else}}{{formatSize .Size}}{{end}}</td>
+      <td class="size">{{if .IsDir}}&mdash;{{else if .Size}}{{formatSize .Size}}{{else}}&mdash;{{end}}</td>
       <td class="time">{{if .Time}}{{.Time}}{{else}}&mdash;{{end}}</td>
       <td>{{if not .IsDir}}<a class="dl-btn" href="{{.Href}}" download>下载</a>{{end}}</td>
     </tr>

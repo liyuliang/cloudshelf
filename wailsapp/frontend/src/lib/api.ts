@@ -28,8 +28,11 @@ export type RWSDatasetData = main.RWSDatasetDataDTO
 export interface LANShare {
   token: string
   name: string
+  provider?: string
   bucket: string
   prefix: string
+  driveId?: string
+  studyOid?: string
   url: string
   urls: string[]
   createdAt: string
@@ -159,6 +162,10 @@ export const api = {
   // 局域网分享
   createLANShare: (a: Account, bucket: string, prefix: string, name: string, hours: number) =>
     App.CreateLANShare(a, bucket, prefix, name, hours),
+  createSharePointLANShare: (a: Account, driveID: string, driveName: string, itemPath: string, name: string, hours: number) =>
+    App.CreateSharePointLANShare(a, driveID, driveName, itemPath, name, hours),
+  createRWSLANShare: (a: Account, studyOID: string, studyName: string, subPath: string, name: string, hours: number) =>
+    App.CreateRWSLANShare(a, studyOID, studyName, subPath, name, hours),
   listLANShares: () => App.ListLANShares(),
   removeLANShare: (token: string) => App.RemoveLANShare(token),
   getLANAddresses: () => App.GetLANAddresses(),
