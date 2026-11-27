@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import MenuBar from './components/MenuBar.vue'
 import AccountList from './components/AccountList.vue'
 import UnlockGate from './components/UnlockGate.vue'
@@ -36,7 +36,72 @@ const simpleKind = computed<Kind | null>(() => {
 const confirmState = ref<{ message: string; yes: () => void } | null>(null)
 const lanPanelOpen = ref(false)
 
-onMounted(() => session.init())
+const AUTO_LOCK_MS = 10 * 60 * 1000
+const ACTIVITY_EVENTS = ['mousemove', 'mousedown', 'keydown', 'wheel', 'touchstart'] as const
+let idleTimer: number | undefined
+let lastActivityReset = 0
+
+function clearIdleTimer() {
+  if (idleTimer !== undefined) {
+    window.clearTimeout(idleTimer)
+    idleTimer = undefined
+  }
+}
+
+async function autoLock() {
+  clearIdleTimer()
+  if (!session.unlocked) return
+  dialog.value = null
+  confirmState.value = null
+  editTarget.value = null
+  selected.value = null
+  // 只锁定账号库并回到主密码界面，不关闭后台局域网分享服务（lanServer）
+  await session.lock()
+  notify('超过 10 分钟未操作，已自动锁定')
+}
+
+function resetIdleTimer(force = false) {
+  if (!session.unlocked) {
+    clearIdleTimer()
+    return
+  }
+  const now = Date.now()
+  if (!force && now - lastActivityReset < 1000) return
+  lastActivityReset = now
+  clearIdleTimer()
+  idleTimer = window.setTimeout(() => {
+    void autoLock()
+  }, AUTO_LOCK_MS)
+}
+
+function onUserActivity() {
+  resetIdleTimer(false)
+}
+
+watch(
+  () => session.unlocked,
+  (unlocked) => {
+    if (unlocked) {
+      resetIdleTimer(true)
+    } else {
+      clearIdleTimer()
+    }
+  },
+)
+
+onMounted(() => {
+  void session.init()
+  for (const ev of ACTIVITY_EVENTS) {
+    window.addEventListener(ev, onUserActivity, { passive: true })
+  }
+})
+
+onUnmounted(() => {
+  clearIdleTimer()
+  for (const ev of ACTIVITY_EVENTS) {
+    window.removeEventListener(ev, onUserActivity)
+  }
+})
 
 function notify(msg: string) {
   toast.value = msg
@@ -206,7 +271,7 @@ async function onRelock() {
     </div>
 
     <TransferBar />
-    <LANSharePanel v-if="lanPanelOpen" @notify="notify" />
+    <LANSharePanel v-if="session.unlocked && lanPanelOpen" @notify="notify" />
     <LogPanel />
 
     <AccountEditDialog
