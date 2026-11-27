@@ -311,6 +311,38 @@ export namespace main {
 	        this.Status = source["Status"];
 	    }
 	}
+	export class ReleaseInfoDTO {
+	    currentVersion: string;
+	    latestVersion: string;
+	    releaseName: string;
+	    releaseNotes: string;
+	    htmlUrl: string;
+	    assetName: string;
+	    assetUrl: string;
+	    assetSize: number;
+	    hasUpdate: boolean;
+	    isDev: boolean;
+	    canSelfUpdate: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new ReleaseInfoDTO(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.currentVersion = source["currentVersion"];
+	        this.latestVersion = source["latestVersion"];
+	        this.releaseName = source["releaseName"];
+	        this.releaseNotes = source["releaseNotes"];
+	        this.htmlUrl = source["htmlUrl"];
+	        this.assetName = source["assetName"];
+	        this.assetUrl = source["assetUrl"];
+	        this.assetSize = source["assetSize"];
+	        this.hasUpdate = source["hasUpdate"];
+	        this.isDev = source["isDev"];
+	        this.canSelfUpdate = source["canSelfUpdate"];
+	    }
+	}
 	export class SPItemDTO {
 	    ID: string;
 	    Name: string;

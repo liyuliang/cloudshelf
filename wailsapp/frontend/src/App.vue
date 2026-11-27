@@ -10,10 +10,12 @@ import LANSharePanel from './components/LANSharePanel.vue'
 import AccountEditDialog from './components/dialogs/AccountEditDialog.vue'
 import ProxyDialog from './components/dialogs/ProxyDialog.vue'
 import SimpleDialogs from './components/dialogs/SimpleDialogs.vue'
+import UpdateDialog from './components/dialogs/UpdateDialog.vue'
 import Modal from './components/Modal.vue'
 import { useSession } from './stores/session'
 import { useBrowser } from './stores/browser'
-import { api, errText, type Account, type ShareSession } from './lib/api'
+import { api, errText, type Account, type ReleaseInfo, type ShareSession } from './lib/api'
+import { EventsOn } from '../wailsjs/runtime/runtime'
 
 type Dialog = 'account-edit' | 'proxy' | 'change-pw' | 'change-db' | 'export' | 'import' | null
 type Kind = 'change-pw' | 'change-db' | 'export' | 'import'
@@ -35,6 +37,10 @@ const simpleKind = computed<Kind | null>(() => {
 
 const confirmState = ref<{ message: string; yes: () => void } | null>(null)
 const lanPanelOpen = ref(false)
+const updateOpen = ref(false)
+const updateChecking = ref(false)
+const updateInfo = ref<ReleaseInfo | null>(null)
+let offUpdateAvailable: (() => void) | undefined
 
 const AUTO_LOCK_MS = 10 * 60 * 1000
 const ACTIVITY_EVENTS = ['mousemove', 'mousedown', 'keydown', 'wheel', 'touchstart'] as const
@@ -91,12 +97,18 @@ watch(
 
 onMounted(() => {
   void session.init()
+  offUpdateAvailable = EventsOn('update:available', (info: ReleaseInfo) => {
+    updateInfo.value = info
+    updateChecking.value = false
+    updateOpen.value = true
+  })
   for (const ev of ACTIVITY_EVENTS) {
     window.addEventListener(ev, onUserActivity, { passive: true })
   }
 })
 
 onUnmounted(() => {
+  offUpdateAvailable?.()
   clearIdleTimer()
   for (const ev of ACTIVITY_EVENTS) {
     window.removeEventListener(ev, onUserActivity)
@@ -155,8 +167,24 @@ async function handleMenu(name: string) {
     case 'lan-shares':
       lanPanelOpen.value = !lanPanelOpen.value
       break
+    case 'check-update':
+      void checkUpdateManual()
+      break
     default:
       break
+  }
+}
+
+async function checkUpdateManual() {
+  updateOpen.value = true
+  updateChecking.value = true
+  try {
+    updateInfo.value = await api.checkForUpdate()
+  } catch (e) {
+    updateOpen.value = false
+    notify('检查更新失败：' + errText(e))
+  } finally {
+    updateChecking.value = false
   }
 }
 
@@ -287,6 +315,13 @@ async function onRelock() {
       @close="dialog = null"
       @changed="onChanged"
       @relock="onRelock"
+    />
+    <UpdateDialog
+      v-if="updateOpen"
+      :info="updateInfo"
+      :checking="updateChecking"
+      @close="updateOpen = false"
+      @notify="notify"
     />
 
     <Modal v-if="confirmState" title="确认删除" width="360px" @close="confirmState = null">

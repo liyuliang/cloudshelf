@@ -4,9 +4,13 @@ import {main} from '../models';
 
 export function AddAccount(arg1:main.AccountDTO):Promise<void>;
 
+export function ApplyUpdate(arg1:string,arg2:string):Promise<void>;
+
 export function ChangeDBLocation(arg1:string):Promise<void>;
 
 export function ChangeMasterPassword(arg1:string):Promise<void>;
+
+export function CheckForUpdate():Promise<main.ReleaseInfoDTO>;
 
 export function CheckProxy(arg1:main.ProxyDTO,arg2:string,arg3:number):Promise<string>;
 
@@ -38,6 +42,8 @@ export function DownloadFiles(arg1:main.AccountDTO,arg2:string,arg3:string,arg4:
 
 export function ExportAccounts(arg1:string):Promise<string>;
 
+export function GetAppVersion():Promise<string>;
+
 export function GetBucketPrefix(arg1:main.AccountDTO,arg2:string):Promise<string>;
 
 export function GetLANAddresses():Promise<Array<string>>;
@@ -63,6 +69,8 @@ export function ListObjectsRecursive(arg1:main.AccountDTO,arg2:string,arg3:strin
 export function Lock():Promise<void>;
 
 export function NeedSharePassword(arg1:string):Promise<boolean>;
+
+export function OpenReleasePage(arg1:string):Promise<void>;
 
 export function OpenShareFile(arg1:string,arg2:string):Promise<main.ShareSessionDTO>;
 

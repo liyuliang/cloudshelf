@@ -90,7 +90,7 @@ jobs:
           if [ -n "${{ matrix.wails_tags }}" ]; then
             EXTRA_ARGS="-tags ${{ matrix.wails_tags }}"
           fi
-          wails build -clean -platform "${{ matrix.wails_platform }}" ${EXTRA_ARGS}
+          wails build -clean -platform "${{ matrix.wails_platform }}" -ldflags "-X cloudshelf/internal/version.Version=${{ needs.prepare.outputs.tag }}" ${EXTRA_ARGS}
 
       - name: Package Wails desktop artifact
         shell: bash
@@ -108,14 +108,15 @@ jobs:
         shell: bash
         run: |
           mkdir -p dist
+          LDFLAGS="-s -w -X cloudshelf/internal/version.Version=${{ needs.prepare.outputs.tag }}"
           if [ "${{ matrix.platform }}" == "windows" ]; then
-            CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -ldflags="-s -w" -o dist/cloudshelf-cli-windows-amd64.exe ./cmd/cli
+            CGO_ENABLED=0 GOOS=windows GOARCH=amd64 go build -ldflags="${LDFLAGS}" -o dist/cloudshelf-cli-windows-amd64.exe ./cmd/cli
           elif [ "${{ matrix.platform }}" == "macos" ]; then
-            CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -ldflags="-s -w" -o dist/cloudshelf-cli-darwin-amd64 ./cmd/cli
-            CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -ldflags="-s -w" -o dist/cloudshelf-cli-darwin-arm64 ./cmd/cli
+            CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build -ldflags="${LDFLAGS}" -o dist/cloudshelf-cli-darwin-amd64 ./cmd/cli
+            CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -ldflags="${LDFLAGS}" -o dist/cloudshelf-cli-darwin-arm64 ./cmd/cli
           else
-            CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o dist/cloudshelf-cli-linux-amd64 ./cmd/cli
-            CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags="-s -w" -o dist/cloudshelf-cli-linux-arm64 ./cmd/cli
+            CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="${LDFLAGS}" -o dist/cloudshelf-cli-linux-amd64 ./cmd/cli
+            CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags="${LDFLAGS}" -o dist/cloudshelf-cli-linux-arm64 ./cmd/cli
           fi
 
       - name: Upload build artifacts

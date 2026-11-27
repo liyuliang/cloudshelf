@@ -179,6 +179,19 @@ export const api = {
   validateProxy: (c: ProxyConfig) => App.ValidateProxy(c),
   checkProxy: (c: ProxyConfig, url: string, timeoutSec: number) =>
     App.CheckProxy(c, url, timeoutSec),
+
+  // 更新
+  getAppVersion: () => App.GetAppVersion(),
+  checkForUpdate: () => App.CheckForUpdate(),
+  applyUpdate: (assetURL: string, assetName: string) => App.ApplyUpdate(assetURL, assetName),
+  openReleasePage: (url: string) => App.OpenReleasePage(url),
+}
+
+export type ReleaseInfo = main.ReleaseInfoDTO
+export interface UpdateProgress {
+  done: number
+  total: number
+  percent: number
 }
 
 export function errText(e: unknown): string {

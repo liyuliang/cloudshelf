@@ -41,7 +41,10 @@ const groups: Group[] = [
   },
   {
     name: '设置',
-    items: [{ key: 'proxy', label: '代理设置' }],
+    items: [
+      { key: 'proxy', label: '代理设置' },
+      { key: 'check-update', label: '检查更新' },
+    ],
   },
 ]
 

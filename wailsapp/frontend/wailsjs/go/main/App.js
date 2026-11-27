@@ -6,12 +6,20 @@ export function AddAccount(arg1) {
   return window['go']['main']['App']['AddAccount'](arg1);
 }
 
+export function ApplyUpdate(arg1, arg2) {
+  return window['go']['main']['App']['ApplyUpdate'](arg1, arg2);
+}
+
 export function ChangeDBLocation(arg1) {
   return window['go']['main']['App']['ChangeDBLocation'](arg1);
 }
 
 export function ChangeMasterPassword(arg1) {
   return window['go']['main']['App']['ChangeMasterPassword'](arg1);
+}
+
+export function CheckForUpdate() {
+  return window['go']['main']['App']['CheckForUpdate']();
 }
 
 export function CheckProxy(arg1, arg2, arg3) {
@@ -74,6 +82,10 @@ export function ExportAccounts(arg1) {
   return window['go']['main']['App']['ExportAccounts'](arg1);
 }
 
+export function GetAppVersion() {
+  return window['go']['main']['App']['GetAppVersion']();
+}
+
 export function GetBucketPrefix(arg1, arg2) {
   return window['go']['main']['App']['GetBucketPrefix'](arg1, arg2);
 }
@@ -124,6 +136,10 @@ export function Lock() {
 
 export function NeedSharePassword(arg1) {
   return window['go']['main']['App']['NeedSharePassword'](arg1);
+}
+
+export function OpenReleasePage(arg1) {
+  return window['go']['main']['App']['OpenReleasePage'](arg1);
 }
 
 export function OpenShareFile(arg1, arg2) {

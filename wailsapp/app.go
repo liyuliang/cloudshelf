@@ -32,6 +32,7 @@ func (a *App) startup(ctx context.Context) {
 	a.mu.Unlock()
 
 	a.initLogForwarder()
+	a.initUpdater()
 }
 
 // runtimeCtx 返回 runtime 上下文；应用尚未启动完成时返回 nil。
