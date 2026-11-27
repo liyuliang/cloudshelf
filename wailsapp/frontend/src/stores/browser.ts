@@ -161,6 +161,47 @@ export const useBrowser = defineStore('browser', () => {
     if (!kept.some((p) => p.id === activePaneId.value)) activePaneId.value = kept[0].id
   }
 
+  function loadAccountRoot(tab: BrowserTab) {
+    if (tab.account.Provider === 'sharepoint') {
+      void loadDrives(tab)
+    } else if (tab.account.Provider === 'rws') {
+      void loadRWSStudies(tab)
+    } else {
+      void loadBuckets(tab)
+    }
+  }
+
+  function cloneTab(src: BrowserTab): BrowserTab {
+    const copy = makeTab(src.account)
+    copy.title = src.title
+    if (src.readOnly && src.shareSession) {
+      copy.readOnly = true
+      copy.shareSession = src.shareSession
+      copy.shareRootPath = src.shareRootPath
+      if (src.shareSession.Provider === 'sharepoint') {
+        copy.driveID = src.shareSession.DriveID
+        copy.driveName = src.shareSession.DriveName
+        copy.itemPath = src.shareSession.ItemPath
+      } else {
+        copy.bucket = src.shareSession.Bucket
+        copy.view = 'objects'
+      }
+    }
+    return copy
+  }
+
+  function loadClonedTab(copy: BrowserTab) {
+    if (copy.readOnly && copy.shareSession) {
+      if (copy.shareSession.Provider === 'sharepoint') {
+        void loadSPItems(copy)
+      } else {
+        void navigate(copy, '')
+      }
+      return
+    }
+    loadAccountRoot(copy)
+  }
+
   // ---- 标签基本操作 ----
 
   function openAccount(acc: Account): BrowserTab {
@@ -176,13 +217,7 @@ export const useBrowser = defineStore('browser', () => {
     const tab = makeTab(acc)
     pane.tabs.push(tab)
     pane.activeId = tab.id
-    if (acc.Provider === 'sharepoint') {
-      void loadDrives(tab)
-    } else if (acc.Provider === 'rws') {
-      void loadRWSStudies(tab)
-    } else {
-      void loadBuckets(tab)
-    }
+    loadAccountRoot(tab)
     return tab
   }
 
@@ -236,18 +271,11 @@ export const useBrowser = defineStore('browser', () => {
   function duplicate(tabId: string) {
     const loc = locate(tabId)
     if (!loc) return
-    const copy = makeTab(loc.tab.account)
-    copy.title = loc.tab.title
+    const copy = cloneTab(loc.tab)
     loc.pane.tabs.splice(loc.index + 1, 0, copy)
     loc.pane.activeId = copy.id
     activePaneId.value = loc.pane.id
-    if (loc.tab.account.Provider === 'sharepoint') {
-      void loadDrives(copy)
-    } else if (loc.tab.account.Provider === 'rws') {
-      void loadRWSStudies(copy)
-    } else {
-      void loadBuckets(copy)
-    }
+    loadClonedTab(copy)
   }
 
   function closeOthers(tabId: string) {
@@ -290,11 +318,10 @@ export const useBrowser = defineStore('browser', () => {
       panes.value = [left, right]
     }
     if (loc.pane.tabs.length <= 1) {
-      const copy = makeTab(loc.tab.account)
-      copy.title = loc.tab.title
+      const copy = cloneTab(loc.tab)
       right.tabs.push(copy)
       right.activeId = copy.id
-      void loadBuckets(copy)
+      loadClonedTab(copy)
     } else {
       loc.pane.tabs.splice(loc.index, 1)
       if (loc.pane.activeId === tabId) loc.pane.activeId = loc.pane.tabs[0]?.id ?? null

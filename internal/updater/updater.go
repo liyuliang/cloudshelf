@@ -59,7 +59,7 @@ func ExpectedAssetName(goos, goarch string) string {
 	switch goos {
 	case "windows":
 		if goarch == "amd64" {
-			return "cloudshelf-windows-amd64.exe"
+			return "cloudshelf-windows-amd64-installer.exe"
 		}
 	case "darwin":
 		return "cloudshelf-macos-universal.zip"
@@ -181,6 +181,19 @@ func DownloadAndApply(ctx context.Context, client *http.Client, assetURL, assetN
 		return fmt.Errorf("下载更新包返回 HTTP %d", resp.StatusCode)
 	}
 
+	lowerName := strings.ToLower(assetName)
+	isWindowsInstaller := runtime.GOOS == "windows" &&
+		(strings.HasSuffix(lowerName, "-installer.exe") || strings.HasSuffix(lowerName, "-setup.exe"))
+
+	if isWindowsInstaller {
+		installerPath := filepath.Join(os.TempDir(), filepath.Base(assetName))
+		if err := downloadToFile(resp.Body, installerPath, resp.ContentLength, onProgress); err != nil {
+			_ = os.Remove(installerPath)
+			return err
+		}
+		return launchWindowsInstaller(installerPath)
+	}
+
 	dir := filepath.Dir(exePath)
 	tmpDownload := filepath.Join(dir, ".cloudshelf-update.tmp")
 	defer os.Remove(tmpDownload)
@@ -190,20 +203,29 @@ func DownloadAndApply(ctx context.Context, client *http.Client, assetURL, assetN
 	}
 
 	switch {
-	case strings.HasSuffix(strings.ToLower(assetName), ".exe"):
+	case strings.HasSuffix(lowerName, ".exe"):
 		return applyBinaryReplace(exePath, tmpDownload)
-	case strings.HasSuffix(strings.ToLower(assetName), ".tar.gz"):
+	case strings.HasSuffix(lowerName, ".tar.gz"):
 		extracted := filepath.Join(dir, ".cloudshelf-update.bin")
 		defer os.Remove(extracted)
 		if err := extractBinaryFromTarGz(tmpDownload, "cloudshelf", extracted); err != nil {
 			return err
 		}
 		return applyBinaryReplace(exePath, extracted)
-	case strings.HasSuffix(strings.ToLower(assetName), ".zip") && runtime.GOOS == "darwin":
+	case strings.HasSuffix(lowerName, ".zip") && runtime.GOOS == "darwin":
 		return applyMacOSAppZip(exePath, tmpDownload)
 	default:
 		return fmt.Errorf("不支持的更新包格式: %s", assetName)
 	}
+}
+
+func launchWindowsInstaller(installerPath string) error {
+	// 通过 cmd start 触发 ShellExecute，以便在需要时正确弹出 UAC 提权提示
+	cmd := exec.Command("cmd", "/C", "start", "", installerPath)
+	if err := cmd.Start(); err != nil {
+		return fmt.Errorf("启动安装程序失败: %w", err)
+	}
+	return nil
 }
 
 func downloadToFile(r io.Reader, dst string, total int64, onProgress func(done, total int64)) error {

@@ -16,7 +16,7 @@ func TestCheckLatest(t *testing.T) {
 	defer func() { version.Version = orig }()
 
 	wantAsset := ExpectedAssetName("windows", "amd64")
-	if wantAsset != "cloudshelf-windows-amd64.exe" {
+	if wantAsset != "cloudshelf-windows-amd64-installer.exe" {
 		t.Fatalf("unexpected asset name: %s", wantAsset)
 	}
 
@@ -31,7 +31,7 @@ func TestCheckLatest(t *testing.T) {
 			Body:    "新增自动更新",
 			HTMLURL: "https://github.com/liyuliang/cloudshelf/releases/tag/v0.2.0",
 			Assets: []ghAsset{
-				{Name: "cloudshelf-windows-amd64.exe", Size: 1024, BrowserDownloadURL: "https://example.com/win.exe"},
+				{Name: "cloudshelf-windows-amd64-installer.exe", Size: 1024, BrowserDownloadURL: "https://example.com/win-installer.exe"},
 				{Name: "cloudshelf-macos-universal.zip", Size: 1024, BrowserDownloadURL: "https://example.com/mac.zip"},
 				{Name: "cloudshelf-linux-amd64.tar.gz", Size: 1024, BrowserDownloadURL: "https://example.com/linux.tar.gz"},
 			},

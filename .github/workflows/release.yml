@@ -90,6 +90,9 @@ jobs:
           if [ -n "${{ matrix.wails_tags }}" ]; then
             EXTRA_ARGS="-tags ${{ matrix.wails_tags }}"
           fi
+          if [ "${{ matrix.platform }}" == "windows" ]; then
+            EXTRA_ARGS="${EXTRA_ARGS} -nsis"
+          fi
           wails build -clean -platform "${{ matrix.wails_platform }}" -ldflags "-X cloudshelf/internal/version.Version=${{ needs.prepare.outputs.tag }}" ${EXTRA_ARGS}
 
       - name: Package Wails desktop artifact
@@ -97,7 +100,7 @@ jobs:
         run: |
           mkdir -p dist
           if [ "${{ matrix.platform }}" == "windows" ]; then
-            cp wailsapp/build/bin/cloudshelf.exe dist/cloudshelf-windows-amd64.exe
+            cp wailsapp/build/bin/cloudshelf-amd64-installer.exe dist/cloudshelf-windows-amd64-installer.exe
           elif [ "${{ matrix.platform }}" == "macos" ]; then
             ditto -c -k --keepParent wailsapp/build/bin/cloudshelf.app dist/cloudshelf-macos-universal.zip
           else
