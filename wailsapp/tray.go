@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	_ "embed"
 	"runtime"
 
@@ -88,8 +89,15 @@ func (a *App) showFromTray() {
 	wruntime.Show(ctx)
 }
 
-// quitFromTray 托盘菜单「退出」：直接退出，不弹确认对话框。
-// 确认对话框只在用户点击主窗口关闭按钮时弹出（见 main.go OnBeforeClose）。
+// hideToTrayAndReset 隐藏主窗口到系统托盘，并锁定账号库、通知前端重置应用状态。
+func (a *App) hideToTrayAndReset(ctx context.Context) {
+	wruntime.Hide(ctx)
+	_ = a.Lock()
+	wruntime.EventsEmit(ctx, "app:reset")
+}
+
+// quitFromTray 托盘菜单「退出」：真正退出应用。
+// 点击主窗口关闭按钮不会退出，而是隐藏到托盘并重置状态（见 main.go OnBeforeClose）。
 func (a *App) quitFromTray() {
 	ctx := a.runtimeCtx()
 	if ctx == nil {

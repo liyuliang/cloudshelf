@@ -41,6 +41,7 @@ const updateOpen = ref(false)
 const updateChecking = ref(false)
 const updateInfo = ref<ReleaseInfo | null>(null)
 let offUpdateAvailable: (() => void) | undefined
+let offAppReset: (() => void) | undefined
 
 const AUTO_LOCK_MS = 10 * 60 * 1000
 const ACTIVITY_EVENTS = ['mousemove', 'mousedown', 'keydown', 'wheel', 'touchstart'] as const
@@ -95,12 +96,28 @@ watch(
   },
 )
 
+function resetAppState() {
+  clearIdleTimer()
+  dialog.value = null
+  confirmState.value = null
+  editTarget.value = null
+  selected.value = null
+  lanPanelOpen.value = false
+  updateOpen.value = false
+  toast.value = ''
+  browser.closeAll()
+  session.resetLocal()
+}
+
 onMounted(() => {
   void session.init()
   offUpdateAvailable = EventsOn('update:available', (info: ReleaseInfo) => {
     updateInfo.value = info
     updateChecking.value = false
     updateOpen.value = true
+  })
+  offAppReset = EventsOn('app:reset', () => {
+    resetAppState()
   })
   for (const ev of ACTIVITY_EVENTS) {
     window.addEventListener(ev, onUserActivity, { passive: true })
@@ -109,6 +126,7 @@ onMounted(() => {
 
 onUnmounted(() => {
   offUpdateAvailable?.()
+  offAppReset?.()
   clearIdleTimer()
   for (const ev of ACTIVITY_EVENTS) {
     window.removeEventListener(ev, onUserActivity)

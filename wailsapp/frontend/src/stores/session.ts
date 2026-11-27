@@ -33,16 +33,20 @@ export const useSession = defineStore('session', () => {
     }
   }
 
-  async function lock() {
-    await api.lock()
+  function resetLocal() {
     unlocked.value = false
     accounts.value = []
     error.value = ''
+  }
+
+  async function lock() {
+    await api.lock()
+    resetLocal()
   }
 
   async function reloadAccounts() {
     accounts.value = await api.listAccounts()
   }
 
-  return { initialized, unlocked, accounts, busy, error, init, unlock, lock, reloadAccounts }
+  return { initialized, unlocked, accounts, busy, error, init, unlock, lock, resetLocal, reloadAccounts }
 })
