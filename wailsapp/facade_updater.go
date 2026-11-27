@@ -57,6 +57,9 @@ func toReleaseInfoDTO(info *updater.ReleaseInfo) ReleaseInfoDTO {
 // initUpdater 在启动时清理上次更新残留的 .old 文件，并异步检查 GitHub Release 新版本。
 func (a *App) initUpdater() {
 	updater.CleanupOldBinary()
+	if version.IsDev(version.Version) {
+		return
+	}
 	go func() {
 		// 等待前端挂载完成，避免早期事件丢失
 		time.Sleep(2500 * time.Millisecond)
@@ -66,7 +69,7 @@ func (a *App) initUpdater() {
 		}
 		checkCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
 		defer cancel()
-		info, err := updater.CheckLatest(checkCtx, proxy.Client(), "")
+		info, err := updater.CheckLatest(checkCtx, proxy.RawClient(), "")
 		if err != nil || info == nil || !info.HasUpdate {
 			return
 		}
@@ -87,7 +90,7 @@ func (a *App) CheckForUpdate() (ReleaseInfoDTO, error) {
 	}
 	checkCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
-	info, err := updater.CheckLatest(checkCtx, proxy.Client(), "")
+	info, err := updater.CheckLatest(checkCtx, proxy.RawClient(), "")
 	if err != nil {
 		return ReleaseInfoDTO{}, err
 	}
@@ -103,7 +106,7 @@ func (a *App) ApplyUpdate(assetURL, assetName string) error {
 	dlCtx, cancel := context.WithTimeout(ctx, 10*time.Minute)
 	defer cancel()
 
-	err := updater.DownloadAndApply(dlCtx, proxy.Client(), assetURL, assetName, func(done, total int64) {
+	err := updater.DownloadAndApply(dlCtx, proxy.RawClient(), assetURL, assetName, func(done, total int64) {
 		pct := 0
 		if total > 0 {
 			pct = int(done * 100 / total)

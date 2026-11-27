@@ -288,6 +288,15 @@ func Client() *http.Client {
 	return client
 }
 
+// RawClient 返回遵循当前代理配置但不写入请求日志（reqlog）的 HTTP 客户端，
+// 适用于后台版本检查等非业务数据请求。
+func RawClient() *http.Client {
+	c := Current()
+	tr := http.DefaultTransport.(*http.Transport).Clone()
+	tr.Proxy = ProxyFuncFor(c)
+	return &http.Client{Transport: tr}
+}
+
 // ==================== 连通性测试 ====================
 
 // Check 用配置 c 向 rawURL 发一次 GET，返回状态码与耗时。
